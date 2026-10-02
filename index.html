@@ -210,6 +210,50 @@
                     </h4>
                     <p class="text-warm-600 dark:text-stone-400 pl-7">Google Drive 模式可直接讀寫雲端筆記，刪除會將整個文章資料夾移至垃圾桶。使用前請在設定中填入授權用戶端 ID 及筆記根資料夾網址。<br>本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
                 </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">4．建立 Google OAuth 用戶端 ID（首次設定）</h4>
+                    <p class="text-warm-600 dark:text-stone-400">建議先用電腦設定。已建立用戶端的使用者可直接跳到第 5 節；同一個用戶端 ID 可供手機及電腦使用。</p>
+                    <ol class="list-decimal pl-5 space-y-3">
+                        <li>開啟 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" class="underline">Google Cloud Console</a>，建立專案（例如 <code>shiguang-journal</code>），並確認上方選到該專案。</li>
+                        <li>在上方搜尋 <span lang="en">Google Drive API</span>，進入後按「啟用」。若已顯示「管理」，表示已啟用。</li>
+                        <li>從左上角選單進入「API 和服務」→「OAuth 同意畫面」，或直接開啟 <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener noreferrer" class="underline">Google Auth Platform 總覽</a>。</li>
+                        <li>首次使用按「開始使用」。應用程式名稱填「拾光手札」，支援及聯絡電子郵件填自己的信箱；一般個人 Gmail 帳號的目標對象選「外部」。依畫面完成條款確認並建立。已完成者可在左側「品牌」查看基本資料。</li>
+                        <li>點左側「目標對象」，維持發布狀態為「測試」。在「測試使用者」按「Add users／新增使用者」，加入實際登入日記網站的 Google 電子郵件並儲存。個人測試不需要按「發布應用程式」。</li>
+                        <li>點「資料存取權」→「新增或移除範圍」，選取下列完整 Drive 權限。找不到時可在手動新增範圍欄位貼上：
+                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all select-text">https://www.googleapis.com/auth/drive</code>
+                            按「更新」，再按頁面下方「Save／儲存」。完成後會在「您的受限制範圍」看到 <code>…/auth/drive</code>。
+                        </li>
+                        <li>點「用戶端」→「建立用戶端」。應用程式類型選「網頁應用程式」（手機也是透過網站使用），名稱填「拾光手札網站」。</li>
+                        <li>在「已授權的 JavaScript 來源」按「新增 URI」，此網站填：
+                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all select-text">https://allenwork2015-ship-it.github.io</code>
+                            只填通訊協定及網域，不加 <code>/mood-blog/</code>、<code>index.html</code> 或最後的斜線。若網站改用其他網域，請填實際來源。
+                        </li>
+                        <li>「已授權的重新導向 URI」留空，按「建立」。複製「用戶端 ID」旁的複製圖示，取得結尾為 <code class="break-all">.apps.googleusercontent.com</code> 的完整文字。不要複製用戶端密鑰。</li>
+                    </ol>
+                    <p class="text-warm-600 dark:text-stone-400">此版本要求完整 Drive 授權，授權能力涵蓋整個雲端硬碟；程式的文章操作使用你指定的筆記目錄。公開提供其他使用者使用時，需依 Google 的 OAuth 驗證要求辦理。網頁不需要用戶端密鑰，請勿將密鑰放進 HTML 或 GitHub。</p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">5．連接 Google Drive 與日常使用</h4>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li>在 Google Drive 開啟筆記根資料夾，複製網址。請選包含年份資料夾的根目錄，例如「拾光手札」，不要選單篇文章目錄。也可以先連接空的根目錄再新增日記。
+                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all">https://drive.google.com/drive/folders/你的資料夾ID</code>
+                        </li>
+                        <li>從 GitHub Pages 網址開啟網站，按齒輪進入設定。第一欄貼上「Google OAuth 用戶端 ID」，第二欄貼上「筆記根資料夾網址」，按「儲存設定」→「登入並連接」。</li>
+                        <li>選擇第 4 節加入的測試帳號，依登入畫面完成授權。成功後顯示「Google Drive 雲端讀寫模式」。若資料夾權限不足，會顯示唯讀模式。</li>
+                        <li>按「寫新日記」即可新增文章及插入照片；儲存會直接寫入雲端。文章檢視中的「編輯」可修改內容，改標題或年份會保留原照片；「刪除」會將整個文章資料夾與照片移至 Google Drive 垃圾桶。</li>
+                        <li>其他裝置修改後，在設定中按「重新讀取」。設定需在每台裝置各填一次；重新整理頁面或授權過期後需再次登入，不會自動背景同步。切換不同資料來源前，請先儲存或複製未完成內文。</li>
+                    </ol>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">6．Google 登入常見問題</h4>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong>400：origin_mismatch</strong>：網站網址與 JavaScript 來源不一致。回到「用戶端」修正來源並儲存，等待設定生效，再關閉錯誤視窗、重新整理網站登入。本網站正確來源為 <code class="break-all">https://allenwork2015-ship-it.github.io</code>。</li>
+                        <li><strong>帳號無法使用測試版</strong>：確認「目標對象」的測試使用者清單包含目前登入的帳號；組織帳號也可能受到管理員政策限制。</li>
+                        <li><strong>無法從本機 HTML 登入</strong>：請由 GitHub Pages 的 HTTPS 網址使用 Google Drive 功能；直接開啟電腦上的 HTML 可使用原有本機模式。</li>
+                        <li><strong>儲存或重新讀取失敗</strong>：檢查網路、授權是否過期，以及資料夾及檔案是否有編輯權限。部分上傳失敗時雲端可能已存在照片或文章，請先保留內文，再檢查或重試；新文章重試時保持原標題與日期。</li>
+                    </ul>
+                    <p><a href="https://developers.google.com/workspace/drive/api/quickstart/js" target="_blank" rel="noopener noreferrer" class="underline">Google 官方用戶端設定說明</a> · <a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth" target="_blank" rel="noopener noreferrer" class="underline">Drive 授權範圍說明</a></p>
+                </div>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
                 <button onclick="app.closeManualModal()" class="px-6 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full transition-all shadow-sm">我知道了</button>
