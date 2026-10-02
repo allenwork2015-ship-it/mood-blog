@@ -75,6 +75,35 @@
             from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Compact two-row header on phones; keep the existing wide layout. */
+        @media (max-width: 639px) {
+            header .journal-header-layout {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto auto;
+                gap: 10px 8px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+            }
+            header .journal-header-brand { grid-column: 1; grid-row: 1; min-width: 0; }
+            header .journal-header-brand > div:first-child { flex-shrink: 0; }
+            header .journal-header-brand h1, header .journal-header-brand p { white-space: nowrap; }
+            header .journal-header-actions { display: contents; }
+            header .journal-header-actions > * { margin-left: 0 !important; }
+            header .journal-header-manual { grid-column: 2; grid-row: 1; }
+            header .journal-header-settings { grid-column: 3; grid-row: 1; }
+            header .journal-header-manual, header .journal-header-settings { width: 44px; height: 44px; }
+            header .journal-header-folder {
+                grid-column: 1; grid-row: 2;
+                min-width: 0; width: 100%; min-height: 44px;
+                justify-content: center;
+            }
+            header .journal-header-folder i { flex-shrink: 0; }
+            header .journal-header-folder #dirLabel { min-width: 0; max-width: none; }
+            header .journal-header-drive {
+                grid-column: 2 / 4; grid-row: 2;
+                min-height: 44px; white-space: nowrap;
+            }
+        }
     </style>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
@@ -83,8 +112,8 @@
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <header class="sticky top-0 z-30 backdrop-blur-md bg-warm-50/85 dark:bg-darkBg/85 border-b border-warm-200 dark:border-darkBorder shadow-sm">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
-            <div class="flex items-center space-x-2.5 cursor-pointer" onclick="app.switchHome()">
+        <div class="journal-header-layout max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
+            <div class="journal-header-brand flex items-center space-x-2.5 cursor-pointer" onclick="app.switchHome()">
                 <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-warm-200 dark:bg-stone-800 flex items-center justify-center text-warm-800 dark:text-warm-200 shadow-inner">
                     <i class="fa-solid fa-feather-pointed text-sm sm:text-lg"></i>
                 </div>
@@ -94,20 +123,20 @@
                 </div>
             </div>
 
-            <div class="flex items-center space-x-1.5 sm:space-x-3">
-                <button onclick="app.pickDirectory()" id="dirBtn" class="px-3 sm:px-4 py-2 bg-warm-700 hover:bg-warm-800 text-white text-xs font-medium rounded-full shadow-sm transition-all duration-200 flex items-center space-x-1.5">
+            <div class="journal-header-actions flex items-center space-x-1.5 sm:space-x-3">
+                <button onclick="app.pickDirectory()" id="dirBtn" class="journal-header-folder px-3 sm:px-4 py-2 bg-warm-700 hover:bg-warm-800 text-white text-xs font-medium rounded-full shadow-sm transition-all duration-200 flex items-center space-x-1.5">
                     <i class="fa-solid fa-folder-open"></i>
                     <span id="dirLabel" class="max-w-[80px] sm:max-w-none truncate">選擇資料夾</span>
                 </button>
-                <button onclick="app.connectDrive()" class="px-3 py-2 bg-warm-100 dark:bg-stone-800 rounded-full text-xs" title="登入並連接 Google Drive">Google Drive</button>
+                <button onclick="app.connectDrive()" class="journal-header-drive px-3 py-2 bg-warm-100 dark:bg-stone-800 rounded-full text-xs" title="登入並連接 Google Drive">Google Drive</button>
                 <button onclick="app.openEditor()" data-write-action class="hidden sm:flex px-4 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-sm font-medium rounded-full shadow-sm transition-all items-center space-x-2">
                     <i class="fa-solid fa-pen-nib"></i>
                     <span>寫新日記</span>
                 </button>
-                <button onclick="app.openManualModal()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-warm-200/60 dark:hover:bg-stone-800 text-warm-700 dark:text-stone-300 transition-colors flex items-center justify-center" title="操作手冊">
+                <button onclick="app.openManualModal()" class="journal-header-manual w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-warm-200/60 dark:hover:bg-stone-800 text-warm-700 dark:text-stone-300 transition-colors flex items-center justify-center" title="操作手冊">
                     <i class="fa-solid fa-circle-question text-base sm:text-lg"></i>
                 </button>
-                <button onclick="app.openSettings()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-warm-200/60 dark:hover:bg-stone-800 text-warm-700 dark:text-stone-300 transition-colors flex items-center justify-center" title="設定與偏好">
+                <button onclick="app.openSettings()" class="journal-header-settings w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-warm-200/60 dark:hover:bg-stone-800 text-warm-700 dark:text-stone-300 transition-colors flex items-center justify-center" title="設定與偏好">
                     <i class="fa-solid fa-gear text-base sm:text-lg"></i>
                 </button>
             </div>
