@@ -81,6 +81,7 @@
 
     <input type="file" id="directoryInput" webkitdirectory multiple hidden onchange="app.loadPostsFromFiles(event)">
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <header class="sticky top-0 z-30 backdrop-blur-md bg-warm-50/85 dark:bg-darkBg/85 border-b border-warm-200 dark:border-darkBorder shadow-sm">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
             <div class="flex items-center space-x-2.5 cursor-pointer" onclick="app.switchHome()">
@@ -98,6 +99,7 @@
                     <i class="fa-solid fa-folder-open"></i>
                     <span id="dirLabel" class="max-w-[80px] sm:max-w-none truncate">選擇資料夾</span>
                 </button>
+                <button onclick="app.connectDrive()" class="px-3 py-2 bg-warm-100 dark:bg-stone-800 rounded-full text-xs" title="登入並連接 Google Drive">Google Drive</button>
                 <button onclick="app.openEditor()" data-write-action class="hidden sm:flex px-4 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-sm font-medium rounded-full shadow-sm transition-all items-center space-x-2">
                     <i class="fa-solid fa-pen-nib"></i>
                     <span>寫新日記</span>
@@ -206,7 +208,7 @@
                         <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">3</span>
                         跨裝置與 Obsidian 同步
                     </h4>
-                    <p class="text-warm-600 dark:text-stone-400 pl-7">本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">Google Drive 模式可直接讀寫雲端筆記，刪除會將整個文章資料夾移至垃圾桶。使用前請在設定中填入授權用戶端 ID 及筆記根資料夾網址。<br>本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
                 </div>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
@@ -262,7 +264,7 @@
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end space-x-3 rounded-b-3xl">
                 <button onclick="app.closeEditor()" class="px-5 py-2.5 bg-white dark:bg-stone-800 hover:bg-warm-100 dark:hover:bg-stone-700 border border-warm-300 dark:border-darkBorder text-warm-700 dark:text-stone-300 text-xs font-medium rounded-full transition-all">取消</button>
-                <button onclick="app.savePost()" class="px-6 py-2.5 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full shadow-sm transition-all">儲存至資料夾</button>
+                <button onclick="app.savePost()" class="px-6 py-2.5 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full shadow-sm transition-all">儲存日記</button>
             </div>
         </div>
     </div>
@@ -301,7 +303,7 @@
 
     <!-- 設定 Modal -->
     <div id="settingsModal" class="fixed inset-0 z-50 bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-md w-full p-6 border border-warm-200 dark:border-darkBorder fade-in space-y-6">
+        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 border border-warm-200 dark:border-darkBorder fade-in space-y-6">
             <div class="flex items-center justify-between border-b border-warm-100 dark:border-darkBorder pb-4">
                 <h3 class="serif-title text-lg font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2">
                     <i class="fa-solid fa-gear text-warm-500"></i>
@@ -313,6 +315,19 @@
             </div>
 
             <div class="space-y-5 text-sm">
+                <div class="space-y-2">
+                    <label for="driveClientId" class="block font-semibold">Google Drive 設定</label>
+                    <input id="driveClientId" placeholder="Google OAuth 用戶端 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs">
+                    <input id="driveFolderUrl" placeholder="筆記根資料夾的 Google Drive 網址或 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs" aria-label="Google Drive 筆記資料夾網址">
+                    <p class="text-xs text-warm-500">設定儲存在此瀏覽器。首次使用請依隨附設定說明建立 Google 授權。連接後可讀寫指定目錄，刪除會移至 Google Drive 垃圾桶。</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="app.saveDriveConfig()" class="px-3 py-2 rounded-lg bg-warm-200 dark:bg-stone-700">儲存設定</button>
+                        <button onclick="app.connectDrive()" class="px-3 py-2 rounded-lg bg-warm-800 text-white">登入並連接</button>
+                        <button onclick="app.refreshDrive()" class="px-3 py-2 rounded-lg border">重新讀取</button>
+                        <button onclick="app.disconnectDrive()" class="px-3 py-2 rounded-lg border">中斷連接</button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">外觀模式 (Theme)</label>
                     <div class="grid grid-cols-3 gap-2">
@@ -359,6 +374,11 @@
         class BlogJournalApp {
             constructor() {
                 this.rootDirHandle = null;
+                this.sourceMode = 'local';
+                this.driveToken = null;
+                this.driveExpires = 0;
+                this.driveRoot = null;
+                this.driveBusy = false;
                 this.readOnly = typeof window.showDirectoryPicker !== 'function';
                 this.posts = [];
                 this.currentFilter = 'all';
@@ -380,8 +400,11 @@
             }
 
             checkPlatform() {
+                if (this.sourceMode === 'drive') {
+                    document.getElementById('deviceModeHint').textContent = this.readOnly ? 'Google Drive 唯讀（資料夾權限不足）' : 'Google Drive 雲端讀寫模式';
+                }
                 const directorySupported = 'webkitdirectory' in document.getElementById('directoryInput');
-                document.getElementById('deviceModeHint').textContent = this.readOnly
+                if (this.sourceMode !== 'drive') document.getElementById('deviceModeHint').textContent = this.readOnly
                     ? (directorySupported ? '唯讀瀏覽模式・重新選取以更新' : '此瀏覽器不支援資料夾選取')
                     : '資料夾讀寫模式';
                 document.querySelectorAll('[data-write-action], #viewEditBtn, #viewDeleteBtn').forEach(button => {
@@ -403,6 +426,7 @@
             }
 
             async loadPostsFromFiles(event) {
+                if (this.driveBusy) { this.showToast('雲端操作進行中，請稍候', 'error'); return; }
                 const input = event.target;
                 const files = Array.from(input.files || []);
                 if (!files.length) return;
@@ -446,6 +470,7 @@
                     this.closeViewModal();
                     this.releasePostImages();
                     this.rootDirHandle = null;
+                    this.sourceMode = 'local';
                     this.readOnly = true;
                     this.posts = loaded.sort((a, b) => new Date(b.date) - new Date(a.date));
                     document.getElementById('dirLabel').textContent = files[0].webkitRelativePath.split('/')[0] + '（唯讀）';
@@ -478,6 +503,7 @@
             }
 
             async pickDirectory() {
+                if (this.driveBusy) { this.showToast('雲端操作進行中，請稍候', 'error'); return; }
                 if (typeof window.showDirectoryPicker !== 'function') {
                     const input = document.getElementById('directoryInput');
                     if (!('webkitdirectory' in input)) {
@@ -491,6 +517,7 @@
 
                 try {
                     this.rootDirHandle = await window.showDirectoryPicker();
+                    this.sourceMode = 'local';
                     this.readOnly = false;
                     this.closeEditor();
                     this.closeViewModal();
@@ -772,8 +799,11 @@
             }
 
             openEditor(postId = null) {
+                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
+                this.driveDraft = null;
+                this.driveEditVersion = null;
                 if (!this.allowWrite()) return;
-                if (!this.rootDirHandle) {
+                if (!this.rootDirHandle && this.sourceMode !== 'drive') {
                     alert('請先點擊頂部的「選擇資料夾」來連結筆記目錄！');
                     return;
                 }
@@ -793,6 +823,7 @@
                     document.getElementById('editorModalTitle').textContent = '編輯日記';
                     const post = this.posts.find(p => p.id === postId);
                     if (post) {
+                        this.driveEditVersion = post.driveNote?.modifiedTime || null;
                         document.getElementById('editPostId').value = post.id;
                         document.getElementById('editOldFolder').value = post.folderName;
                         document.getElementById('editOldYearFolder').value = post.yearFolder || '';
@@ -814,6 +845,7 @@
             }
 
             insertImageToContent(event) {
+                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
                 const file = event.target.files[0];
                 if (!file) return;
 
@@ -841,6 +873,7 @@
 
             async savePost() {
                 if (!this.allowWrite()) return;
+                if (this.sourceMode === 'drive') return this.saveDrivePost();
                 if (!this.rootDirHandle) {
                     this.showToast('尚未連結資料夾', 'error');
                     return;
@@ -943,6 +976,7 @@
 
             async deletePost(postId) {
                 if (!this.allowWrite()) return;
+                if (this.sourceMode === 'drive') return this.deleteDrivePost(postId);
                 if (confirm('確定要在資料夾中刪除這篇日記嗎？')) {
                     const post = this.posts.find(p => p.id === postId);
                     if (post && post.folderName && this.rootDirHandle) {
@@ -965,6 +999,225 @@
                 }
             }
 
+            getDriveConfig() {
+                try { return JSON.parse(localStorage.getItem('shiguang_drive') || '{}'); } catch (error) { return {}; }
+            }
+
+            saveDriveConfig() {
+                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
+                const clientId = document.getElementById('driveClientId').value.trim();
+                const raw = document.getElementById('driveFolderUrl').value.trim();
+                const match = raw.match(/\/folders\/([\w-]+)/);
+                const folderId = match ? match[1] : raw;
+                if (!clientId.endsWith('.apps.googleusercontent.com') || !/^[\w-]+$/.test(folderId)) return this.showToast('請填入有效的用戶端 ID 與資料夾網址', 'error');
+                try { localStorage.setItem('shiguang_drive', JSON.stringify({clientId, folderId})); this.showToast('已儲存 Google Drive 設定'); }
+                catch (error) { this.showToast('無法儲存設定，請允許此網站使用本機儲存空間', 'error'); }
+            }
+
+            async connectDrive() {
+                if (this.driveBusy) return;
+                const config = this.getDriveConfig();
+                if (!config.clientId || !config.folderId) { this.openSettings(); this.showToast('請先儲存 Google Drive 設定', 'error'); return; }
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost') return this.showToast('請由 GitHub Pages 的 HTTPS 網址登入 Google Drive', 'error');
+                if (!window.google?.accounts?.oauth2) return this.showToast('Google 登入元件尚未載入，請稍後重試或檢查網路', 'error');
+                this.driveBusy = true;
+                try {
+                    const response = await new Promise((resolve, reject) => {
+                        const client = window.google.accounts.oauth2.initTokenClient({
+                            client_id: config.clientId,
+                            scope: 'https://www.googleapis.com/auth/drive',
+                            include_granted_scopes: false,
+                            callback: result => result.error ? reject(new Error('Google 授權未完成：' + result.error)) : resolve(result),
+                            error_callback: () => reject(new Error('登入視窗已關閉或被阻擋，請再次按下登入'))
+                        });
+                        client.requestAccessToken({prompt: 'select_account'});
+                    });
+                    if (!window.google.accounts.oauth2.hasGrantedAllScopes(response, 'https://www.googleapis.com/auth/drive')) throw new Error('需要 Google Drive 讀寫授權');
+                    this.driveToken = response.access_token;
+                    this.driveExpires = Date.now() + Number(response.expires_in) * 1000 - 30000;
+                    const root = await this.driveRequest('files/' + encodeURIComponent(config.folderId) + '?fields=id,name,mimeType,capabilities,trashed&supportsAllDrives=true');
+                    if (root.trashed || root.mimeType !== 'application/vnd.google-apps.folder') throw new Error('指定目錄不是可使用的資料夾');
+                    // Commit the source only after the entire folder has loaded successfully.
+                    const posts = await this.fetchDrivePosts(root.id);
+                    if (this.sourceMode !== 'drive' || this.driveRoot?.id !== root.id) this.closeEditor();
+                    this.closeViewModal(); this.releasePostImages();
+                    this.posts = posts; this.rootDirHandle = null; this.driveRoot = root;
+                    this.sourceMode = 'drive'; this.readOnly = !root.capabilities?.canAddChildren;
+                    document.getElementById('dirLabel').textContent = root.name + '（雲端）';
+                    this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings();
+                    this.showToast(`已連接 Google Drive，載入 ${posts.length} 篇日記`);
+                } catch (error) { this.showToast(error.message, 'error'); }
+                finally { this.driveBusy = false; }
+            }
+
+            async driveRequest(path, options = {}, format = 'json', upload = false) {
+                if (!this.driveToken || Date.now() >= this.driveExpires) throw new Error('Google 授權已過期，請按 Google Drive 重新登入；未儲存內文仍保留');
+                const response = await fetch('https://www.googleapis.com/' + (upload ? 'upload/drive/v3/' : 'drive/v3/') + path, {
+                    ...options, headers: {...options.headers, Authorization: 'Bearer ' + this.driveToken}
+                });
+                if (!response.ok) {
+                    if (response.status === 401) this.driveExpires = 0;
+                    const detail = await response.json().catch(() => ({}));
+                    throw new Error(response.status === 401 ? 'Google 授權已過期，請重新登入' : 'Google Drive 操作失敗：' + (detail.error?.message || response.status));
+                }
+                return format === 'text' ? response.text() : format === 'blob' ? response.blob() : response.json();
+            }
+
+            async driveChildren(parent) {
+                const files = []; let pageToken = '';
+                do {
+                    const query = new URLSearchParams({q: `'${parent}' in parents and trashed = false`, fields: 'nextPageToken,files(id,name,mimeType,parents,capabilities,modifiedTime)', pageSize: '1000', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true'});
+                    if (pageToken) query.set('pageToken', pageToken);
+                    const result = await this.driveRequest('files?' + query);
+                    files.push(...(result.files || [])); pageToken = result.nextPageToken;
+                } while (pageToken);
+                return files;
+            }
+
+            async fetchDrivePosts(rootId) {
+                const posts = [];
+                const folderType = 'application/vnd.google-apps.folder';
+                const addPost = async (folder, yearFolder) => {
+                    const entries = await this.driveChildren(folder.id);
+                    const notes = entries.filter(file => file.name === 'note.md');
+                    if (!notes.length) return;
+                    if (notes.length > 1) throw new Error(folder.name + ' 含有重複 note.md，請先整理');
+                    const note = notes[0];
+                    const text = await this.driveRequest('files/' + note.id + '?alt=media&supportsAllDrives=true', {}, 'text');
+                    const post = this.parseMarkdownPost(folder.name, text);
+                    Object.assign(post, {id: folder.id, folderName: folder.name, yearFolder, driveFolder: folder, driveNote: note, imagesMap: {}});
+                    posts.push(post);
+                    const images = async (items, prefix = '') => {
+                        for (const file of items) {
+                            if (file.mimeType === folderType) await images(await this.driveChildren(file.id), prefix + file.name + '/');
+                            else if (/\.(jpe?g|png|webp|gif|avif|bmp|svg)$/i.test(file.name)) {
+                                const blob = await this.driveRequest('files/' + file.id + '?alt=media&supportsAllDrives=true', {}, 'blob');
+                                post.imagesMap[prefix + file.name] = URL.createObjectURL(blob);
+                            }
+                        }
+                    };
+                    await images(entries); post.coverImage = Object.values(post.imagesMap)[0] || '';
+                };
+                try {
+                    for (const folder of await this.driveChildren(rootId)) {
+                        if (folder.mimeType !== folderType) continue;
+                        if (/^\d{4}$/.test(folder.name)) {
+                            for (const child of await this.driveChildren(folder.id)) if (child.mimeType === folderType) await addPost(child, folder.name);
+                        } else await addPost(folder, null);
+                    }
+                    return posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                } catch (error) { this.releasePostImages(posts); throw error; }
+            }
+
+            async refreshDrive() {
+                if (this.driveBusy) return;
+                if (this.sourceMode !== 'drive') return this.showToast('請先連接 Google Drive', 'error');
+                this.driveBusy = true;
+                try { await this.reloadDrivePosts(); this.showToast('已重新讀取雲端日記'); }
+                catch (error) { this.showToast(error.message, 'error'); }
+                finally { this.driveBusy = false; }
+            }
+
+            async reloadDrivePosts() {
+                const posts = await this.fetchDrivePosts(this.driveRoot.id);
+                this.closeViewModal(); this.releasePostImages(); this.posts = posts;
+                this.renderPosts(); this.updateStats();
+            }
+
+            disconnectDrive() {
+                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
+                if (this.driveToken && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(this.driveToken, () => {});
+                this.driveToken = null; this.driveExpires = 0; this.driveRoot = null;
+                if (this.sourceMode === 'drive') {
+                    this.closeEditor(); this.closeViewModal(); this.releasePostImages(); this.posts = [];
+                    this.sourceMode = 'local'; this.readOnly = typeof window.showDirectoryPicker !== 'function';
+                    document.getElementById('dirLabel').textContent = '選擇資料夾';
+                    this.checkPlatform(); this.renderPosts(); this.updateStats();
+                }
+                this.showToast('已中斷 Google Drive 連接');
+            }
+
+            async driveFolder(parent, name) {
+                const matches = (await this.driveChildren(parent)).filter(file => file.name === name);
+                if (matches.length > 1 || matches.some(file => file.mimeType !== 'application/vnd.google-apps.folder')) throw new Error('雲端存在同名項目，請先整理：' + name);
+                if (matches.length) return matches[0];
+                return this.driveRequest('files?fields=id,name,parents,capabilities&supportsAllDrives=true', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name, mimeType:'application/vnd.google-apps.folder', parents:[parent]})});
+            }
+
+            async driveUpload(parent, name, blob, existingId = null) {
+                const metadata = existingId ? {name} : {name, parents:[parent]};
+                const boundary = 'shiguang_' + crypto.randomUUID();
+                const body = new Blob([
+                    '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n', JSON.stringify(metadata),
+                    '\r\n--' + boundary + '\r\nContent-Type: ' + (blob.type || 'application/octet-stream') + '\r\n\r\n', blob,
+                    '\r\n--' + boundary + '--\r\n'
+                ]);
+                return this.driveRequest('files' + (existingId ? '/' + existingId : '') + '?uploadType=multipart&fields=id,name,modifiedTime&supportsAllDrives=true', {method:existingId ? 'PATCH' : 'POST', headers:{'Content-Type':'multipart/related; boundary=' + boundary}, body}, 'json', true);
+            }
+
+            async saveDrivePost() {
+                if (this.driveBusy) return;
+                const value = id => document.getElementById(id).value;
+                const title = value('postTitle').trim(), date = value('postDate'), content = value('postContent').trim();
+                if (!title || !content || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return this.showToast('請填寫標題、日期及內文', 'error');
+                const post = this.posts.find(item => item.id === value('editPostId'));
+                if (value('editPostId') && !post) return this.showToast('文章資料已更新，請重新開啟編輯', 'error');
+                this.driveBusy = true; let saved = false;
+                try {
+                    const year = await this.driveFolder(this.driveRoot.id, date.slice(0,4));
+                    const name = date + '-' + title.replace(/[\/\\?%*:|"<>]/g, '');
+                    const siblings = await this.driveChildren(year.id);
+                    if (siblings.some(file => file.name === name && file.id !== post?.id && file.id !== this.driveDraft?.id)) throw new Error('已有同名文章，請更改標題或日期');
+                    let folder = post?.driveFolder;
+                    if (post) {
+                        const latest = await this.driveRequest('files/' + post.driveNote.id + '?fields=modifiedTime&supportsAllDrives=true');
+                        if (latest.modifiedTime !== this.driveEditVersion) throw new Error('此文章已由其他裝置修改，請先保留內文並重新讀取');
+                    } else {
+                        if (this.driveDraft && (this.driveDraft.name !== name || this.driveDraft.parents?.[0] !== year.id)) throw new Error('上次上傳未完成，請保持原標題與日期重試，或重新開啟編輯');
+                        folder = this.driveDraft || await this.driveFolder(year.id, name);
+                        this.driveDraft = folder;
+                    }
+                    // Upload photographs before publishing Markdown so it never references a failed upload.
+                    const children = await this.driveChildren(folder.id);
+                    for (const [imageName, image] of Object.entries(this.stagedImages)) {
+                        const matches = children.filter(file => file.name === imageName);
+                        if (matches.length > 1) throw new Error('圖片檔名重複：' + imageName);
+                        await this.driveUpload(folder.id, imageName, image, matches[0]?.id);
+                    }
+                    const mood = value('postMood'), category = value('postCategory');
+                    const markdown = `# ${title}\n\n- 日期：${date}\n- 心情：${this.getMoodObj(mood).emoji} ${this.getMoodObj(mood).name}\n- 心情ID：${mood}\n- 分類：${this.getCategoryObj(category).name}\n- 分類ID：${category}\n\n## 內文\n\n${content}\n`;
+                    const note = await this.driveUpload(folder.id, 'note.md', new Blob([markdown], {type:'text/markdown'}), post?.driveNote.id || this.driveDraft?.noteId);
+                    if (post) { post.driveNote.modifiedTime = note.modifiedTime; this.driveEditVersion = note.modifiedTime; }
+                    else this.driveDraft.noteId = note.id;
+                    // Keep the existing folder and images when changing the title or year.
+                    if (post && (folder.name !== name || folder.parents?.[0] !== year.id)) {
+                        const query = new URLSearchParams({supportsAllDrives:'true'});
+                        if (folder.parents?.[0] !== year.id) { query.set('addParents',year.id); query.set('removeParents',(folder.parents || []).join(',')); }
+                        await this.driveRequest('files/' + folder.id + '?' + query, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+                    }
+                    saved = true;
+                    this.driveDraft = null;
+                    if (post) post.driveNote.modifiedTime = note.modifiedTime;
+                    this.closeEditor();
+                    await this.reloadDrivePosts();
+                    this.showToast('已儲存至 Google Drive');
+                } catch (error) { this.showToast((saved ? '已儲存，但重新讀取失敗：' : '儲存未全部完成，內文仍保留：') + error.message, 'error'); }
+                finally { this.driveBusy = false; }
+            }
+
+            async deleteDrivePost(postId) {
+                if (this.driveBusy) return;
+                const post = this.posts.find(item => item.id === postId);
+                if (!post || !confirm('將此文章與照片的整個資料夾移至 Google Drive 垃圾桶？')) return;
+                this.driveBusy = true;
+                try {
+                    await this.driveRequest('files/' + post.id + '?supportsAllDrives=true', {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});
+                    this.releasePostImages([post]); this.posts = this.posts.filter(item => item.id !== postId);
+                    this.closeViewModal(); this.renderPosts(); this.updateStats(); this.showToast('文章與照片已移至 Google Drive 垃圾桶');
+                } catch (error) { this.showToast(error.message, 'error'); }
+                finally { this.driveBusy = false; }
+            }
+
             openManualModal() {
                 document.getElementById('manualModal').classList.remove('hidden');
             }
@@ -974,6 +1227,9 @@
             }
 
             openSettings() {
+                const config = this.getDriveConfig();
+                document.getElementById('driveClientId').value = config.clientId || '';
+                document.getElementById('driveFolderUrl').value = config.folderId || '';
                 this.updateSettingsUI();
                 document.getElementById('settingsModal').classList.remove('hidden');
             }
