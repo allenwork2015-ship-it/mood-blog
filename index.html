@@ -79,6 +79,8 @@
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
 
+    <input type="file" id="directoryInput" webkitdirectory multiple hidden onchange="app.loadPostsFromFiles(event)">
+
     <header class="sticky top-0 z-30 backdrop-blur-md bg-warm-50/85 dark:bg-darkBg/85 border-b border-warm-200 dark:border-darkBorder shadow-sm">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
             <div class="flex items-center space-x-2.5 cursor-pointer" onclick="app.switchHome()">
@@ -96,7 +98,7 @@
                     <i class="fa-solid fa-folder-open"></i>
                     <span id="dirLabel" class="max-w-[80px] sm:max-w-none truncate">選擇資料夾</span>
                 </button>
-                <button onclick="app.openEditor()" class="hidden sm:flex px-4 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-sm font-medium rounded-full shadow-sm transition-all items-center space-x-2">
+                <button onclick="app.openEditor()" data-write-action class="hidden sm:flex px-4 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-sm font-medium rounded-full shadow-sm transition-all items-center space-x-2">
                     <i class="fa-solid fa-pen-nib"></i>
                     <span>寫新日記</span>
                 </button>
@@ -159,7 +161,7 @@
     </main>
 
     <!-- 手機版懸浮寫作按鈕 (FAB) -->
-    <button onclick="app.openEditor()" class="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-warm-800 dark:bg-stone-100 dark:text-stone-900 text-warm-50 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform active:scale-95" title="寫新日記">
+    <button onclick="app.openEditor()" data-write-action class="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-warm-800 dark:bg-stone-100 dark:text-stone-900 text-warm-50 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform active:scale-95" title="寫新日記">
         <i class="fa-solid fa-pen-nib"></i>
     </button>
 
@@ -185,7 +187,7 @@
                         <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">1</span>
                         手機隨身瀏覽與搜尋
                     </h4>
-                    <p class="text-warm-600 dark:text-stone-400 pl-7">在支援資料夾讀寫的瀏覽器（如 Android Chrome 或電腦端）中點擊「選擇資料夾」，即可隨時隨地用手機搜尋、篩選與閱讀所有歷年手札。</p>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">點擊「選擇資料夾」，選取包含年份／文章資料夾／note.md 的筆記目錄。支援直接讀寫的瀏覽器（如桌面 Chrome／Edge）可新增、編輯與刪除；其他支援資料夾選取的瀏覽器（包含新版 iPhone／iPad Safari）使用唯讀模式，可搜尋、篩選與閱讀文章及照片。若無法選取資料夾，請更新系統與瀏覽器，或改用支援此功能的裝置。</p>
                 </div>
                 <div class="space-y-1.5">
                     <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
@@ -204,7 +206,7 @@
                         <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">3</span>
                         跨裝置與 Obsidian 同步
                     </h4>
-                    <p class="text-warm-600 dark:text-stone-400 pl-7">本系統完美相容 Obsidian 年份子資料夾架構（例如 `2026/`），建議搭配雲端硬碟或 Obsidian Sync 讓手機與電腦資料保持一致。</p>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
                 </div>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
@@ -357,6 +359,7 @@
         class BlogJournalApp {
             constructor() {
                 this.rootDirHandle = null;
+                this.readOnly = typeof window.showDirectoryPicker !== 'function';
                 this.posts = [];
                 this.currentFilter = 'all';
                 this.searchQuery = '';
@@ -377,10 +380,84 @@
             }
 
             checkPlatform() {
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                if (isMobile && !window.showDirectoryPicker) {
-                    document.getElementById('deviceModeHint').textContent = '行動瀏覽模式 (建議用 Chrome 讀取)';
+                const directorySupported = 'webkitdirectory' in document.getElementById('directoryInput');
+                document.getElementById('deviceModeHint').textContent = this.readOnly
+                    ? (directorySupported ? '唯讀瀏覽模式・重新選取以更新' : '此瀏覽器不支援資料夾選取')
+                    : '資料夾讀寫模式';
+                document.querySelectorAll('[data-write-action], #viewEditBtn, #viewDeleteBtn').forEach(button => {
+                    button.disabled = this.readOnly;
+                    button.style.display = this.readOnly ? 'none' : '';
+                });
+            }
+
+            releasePostImages(posts = this.posts) {
+                for (const post of posts) {
+                    for (const url of Object.values(post.imagesMap || {})) URL.revokeObjectURL(url);
                 }
+            }
+
+            allowWrite() {
+                if (!this.readOnly) return true;
+                this.showToast('目前為唯讀模式，無法新增、編輯或刪除原始檔案', 'error');
+                return false;
+            }
+
+            async loadPostsFromFiles(event) {
+                const input = event.target;
+                const files = Array.from(input.files || []);
+                if (!files.length) return;
+                const loaded = [];
+                let skipped = 0;
+                try {
+                    const groups = new Map();
+                    for (const file of files) {
+                        const parts = file.webkitRelativePath.split('/');
+                        if (parts.length < 3) continue;
+                        const directory = parts.slice(0, -1).join('/');
+                        if (!groups.has(directory)) groups.set(directory, []);
+                        groups.get(directory).push(file);
+                    }
+                    for (const [directory, entries] of groups) {
+                        const note = entries.find(file => file.name === 'note.md');
+                        if (!note) continue;
+                        const parts = directory.split('/');
+                        // Root/Year/Post or Root/Post; also allow selecting a year directory.
+                        const yearFolder = /^\d{4}$/.test(parts[parts.length - 2]) ? parts[parts.length - 2] : null;
+                        if (parts.length !== 2 && !(parts.length === 3 && yearFolder)) continue;
+                        try {
+                            const post = this.parseMarkdownPost(parts[parts.length - 1], await note.text());
+                            post.id = 'import-' + loaded.length;
+                            post.folderName = parts[parts.length - 1];
+                            post.yearFolder = yearFolder;
+                            post.subDirHandle = null;
+                            post.imagesMap = {};
+                            loaded.push(post);
+                            // Include relative image subfolders without confusing same-named files.
+                            for (const file of files) {
+                                if (file.webkitRelativePath.startsWith(directory + '/') && /\.(jpe?g|png|webp|gif|avif|bmp|svg)$/i.test(file.name)) {
+                                    const relative = file.webkitRelativePath.slice(directory.length + 1);
+                                    post.imagesMap[relative] = URL.createObjectURL(file);
+                                }
+                            }
+                            post.coverImage = Object.values(post.imagesMap)[0] || '';
+                        } catch (error) { skipped++; console.error(error); }
+                    }
+                    this.closeEditor();
+                    this.closeViewModal();
+                    this.releasePostImages();
+                    this.rootDirHandle = null;
+                    this.readOnly = true;
+                    this.posts = loaded.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    document.getElementById('dirLabel').textContent = files[0].webkitRelativePath.split('/')[0] + '（唯讀）';
+                    this.checkPlatform();
+                    this.renderPosts();
+                    this.updateStats();
+                    this.showToast(`唯讀載入 ${loaded.length} 篇文章` + (skipped ? `，${skipped} 篇讀取失敗` : loaded.length ? '' : '，請確認年份／文章資料夾／note.md 結構'), skipped || !loaded.length ? 'error' : 'success');
+                } catch (error) {
+                    this.releasePostImages(loaded);
+                    console.error(error);
+                    this.showToast('資料夾讀取失敗，請重新選取', 'error');
+                } finally { input.value = ''; }
             }
 
             loadSettings() {
@@ -401,13 +478,23 @@
             }
 
             async pickDirectory() {
-                if (!window.showDirectoryPicker) {
-                    alert('目前使用的瀏覽器（如 iOS Safari）不支援直接讀寫本機資料夾 API。建議在電腦端使用，或在 Android 裝置上使用 Chrome 瀏覽器！');
+                if (typeof window.showDirectoryPicker !== 'function') {
+                    const input = document.getElementById('directoryInput');
+                    if (!('webkitdirectory' in input)) {
+                        this.showToast('此瀏覽器不支援資料夾選取，請更新系統與瀏覽器或改用其他裝置', 'error');
+                        return;
+                    }
+                    input.value = '';
+                    input.click();
                     return;
                 }
 
                 try {
                     this.rootDirHandle = await window.showDirectoryPicker();
+                    this.readOnly = false;
+                    this.closeEditor();
+                    this.closeViewModal();
+                    this.checkPlatform();
                     document.getElementById('dirLabel').innerText = this.rootDirHandle.name;
                     this.showToast(`成功連結資料夾：${this.rootDirHandle.name}`);
                     await this.loadPostsFromFolder();
@@ -420,6 +507,7 @@
 
             async loadPostsFromFolder() {
                 if (!this.rootDirHandle) return;
+                this.releasePostImages();
                 this.posts = [];
 
                 for await (const [name, entry] of this.rootDirHandle.entries()) {
@@ -472,6 +560,7 @@
             }
 
             parseMarkdownPost(folderName, text) {
+                text = text.replace(/\r\n?/g, '\n');
                 let title = folderName.slice(11) || folderName;
                 let mood = 'happy';
                 let date = folderName.slice(0, 10);
@@ -683,6 +772,7 @@
             }
 
             openEditor(postId = null) {
+                if (!this.allowWrite()) return;
                 if (!this.rootDirHandle) {
                     alert('請先點擊頂部的「選擇資料夾」來連結筆記目錄！');
                     return;
@@ -750,6 +840,7 @@
             }
 
             async savePost() {
+                if (!this.allowWrite()) return;
                 if (!this.rootDirHandle) {
                     this.showToast('尚未連結資料夾', 'error');
                     return;
@@ -823,13 +914,15 @@
                 document.getElementById('viewDate').textContent = post.date;
                 document.getElementById('viewTitle').textContent = post.title;
 
-                let parsedContent = escapeHtml(post.content);
-                if (post.imagesMap) {
-                    for (const [fileName, blobUrl] of Object.entries(post.imagesMap)) {
-                        const regex = new RegExp(`!\\[.*?\\]\\(${fileName}\\)`, 'g');
-                        parsedContent = parsedContent.replace(regex, `<div class="my-4 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${blobUrl}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`);
-                    }
-                }
+                let parsedContent = escapeHtml(post.content).replace(/!\[(.*?)\]\(((?:[^()]|\([^()]*\))*)\)/g, (tag, alt, source) => {
+                    let path = source;
+                    try { path = decodeURIComponent(source); } catch (error) {}
+                    path = path.replace(/^\.\//, '');
+                    const key = Object.keys(post.imagesMap || {}).find(name => escapeHtml(name) === path);
+                    const url = key === undefined ? null : post.imagesMap[key];
+                    if (!url) return tag;
+                    return `<div class="my-4 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${url}" alt="${alt}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`;
+                });
 
                 document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>');
 
@@ -849,6 +942,7 @@
             }
 
             async deletePost(postId) {
+                if (!this.allowWrite()) return;
                 if (confirm('確定要在資料夾中刪除這篇日記嗎？')) {
                     const post = this.posts.find(p => p.id === postId);
                     if (post && post.folderName && this.rootDirHandle) {
