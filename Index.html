@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拾光手札 - MOOD & BLOG JOURNAL</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        warm: {
+                            50: '#fcfbfa',
+                            100: '#f5f2ed',
+                            200: '#e8e2d8',
+                            300: '#d4cbbe',
+                            400: '#b8ab9a',
+                            500: '#9c8d7b',
+                            600: '#827363',
+                            700: '#695b4e',
+                            800: '#54483e',
+                            900: '#453c34',
+                        },
+                        darkBg: '#121212',
+                        darkCard: '#1e1e1e',
+                        darkBorder: '#2d2d2d'
+                    },
+                    fontFamily: {
+                        serif: ['"Noto Serif TC"', 'serif'],
+                        sans: ['"Inter"', '"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Serif TC', sans-serif;
+            background-color: #fcfbfa;
+            color: #453c34;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .dark body {
+            background-color: #121212;
+            color: #e5e5e5;
+        }
+        .serif-title {
+            font-family: 'Noto Serif TC', serif;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d4cbbe;
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #444;
+        }
+        .fade-in {
+            animation: fadeIn 0.25s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
+
+    <header class="sticky top-0 z-30 backdrop-blur-md bg-warm-50/85 dark:bg-darkBg/85 border-b border-warm-200 dark:border-darkBorder shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5 cursor-pointer" onclick="app.switchHome()">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-warm-200 dark:bg-stone-800 flex items-center justify-center text-warm-800 dark:text-warm-200 shadow-inner">
+                    <i class="fa-solid fa-feather-pointed text-sm sm:text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="serif-title text-base sm:text-xl font-bold tracking-wide text-warm-900 dark:text-stone-100">拾光手札</h1>
+                    <p class="text-[9px] sm:text-[10px] text-warm-500 dark:text-stone-400 font-sans tracking-widest uppercase font-semibold">Mood & Blog</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-1.5 sm:space-x-3">
+                <button onclick="app.pickDirectory()" id="dirBtn" class="px-3 sm:px-4 py-2 bg-warm-700 hover:bg-warm-800 text-white text-xs font-medium rounded-full shadow-sm transition-all duration-200 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span id="dirLabel" class="max-w-[80px] sm:max-w-none truncate">選擇資料夾</span>
+                </button>
+                <button onclick="app.openEditor()" class="hidden sm:flex px-4 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-sm font-medium rounded-full shadow-sm transition-all items-center space-x-2">
+                    <i class="fa-solid fa-pen-nib"></i>
+                    <span>寫新日記</span>
+                </button>
+                <button onclick="app.openManualModal()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-warm-200/60 dark:hover:bg-stone-800 text-warm-700 dark:text-stone-300 transition-colors flex items-center justify-center" title="操作手冊">
+                    <i class="fa-solid fa-circle-question text-base sm:text-lg"></i>
+                </button>
+                <button onclick="app.openSettings()" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-warm-200/60 dark:hover:bg-stone-800 text-warm-700 dark:text-stone-300 transition-colors flex items-center justify-center" title="設定與偏好">
+                    <i class="fa-solid fa-gear text-base sm:text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        
+        <section class="bg-white dark:bg-darkCard border border-warm-200 dark:border-darkBorder rounded-3xl p-5 sm:p-8 shadow-sm transition-colors">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="serif-title text-xl sm:text-2xl font-bold text-warm-900 dark:text-stone-100">記錄每一刻的悸動與平靜</h2>
+                    <p class="text-xs sm:text-sm text-warm-500 dark:text-stone-400 mt-1">目前共有 <span id="totalCount" class="font-semibold text-warm-800 dark:text-warm-200">0</span> 篇心情故事存於資料夾中。</p>
+                </div>
+                <div class="relative w-full md:w-72">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-warm-400">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </span>
+                    <input type="text" id="searchInput" oninput="app.handleSearch(this.value)" placeholder="搜尋標題或內文..." class="w-full pl-10 pr-4 py-2.5 bg-warm-50 dark:bg-stone-900 border border-warm-200 dark:border-darkBorder rounded-full text-sm text-warm-800 dark:text-stone-200 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-warm-400 transition-all">
+                </div>
+            </div>
+
+            <div class="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-warm-100 dark:border-darkBorder flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none" id="moodFiltersContainer">
+            </div>
+        </section>
+
+        <section>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="serif-title text-base sm:text-lg font-bold text-warm-800 dark:text-stone-200 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-warm-500"></i>
+                    <span>日記足跡</span>
+                </h3>
+                <div class="text-[11px] sm:text-xs text-warm-500 dark:text-stone-400 flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-mobile-screen text-amber-600 dark:text-amber-400"></i>
+                    <span id="deviceModeHint">行動瀏覽模式</span>
+                </div>
+            </div>
+
+            <div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+            </div>
+
+            <div id="emptyState" class="hidden py-16 sm:py-20 text-center bg-white dark:bg-darkCard border border-dashed border-warm-300 dark:border-darkBorder rounded-3xl px-4">
+                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-warm-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto text-warm-400 text-xl sm:text-2xl mb-4">
+                    <i class="fa-solid fa-seedling"></i>
+                </div>
+                <h4 class="serif-title text-base sm:text-lg font-bold text-warm-800 dark:text-stone-200">尚未載入日記資料</h4>
+                <p class="text-xs sm:text-sm text-warm-500 dark:text-stone-400 max-w-sm mx-auto mt-1 mb-6">請點擊上方「選擇資料夾」按鈕連結您的筆記目錄，隨時隨地查看您的回憶。</p>
+                <button onclick="app.pickDirectory()" class="px-5 py-2.5 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs sm:text-sm font-medium rounded-full shadow-sm transition-all">
+                    立即連結資料夾
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 手機版懸浮寫作按鈕 (FAB) -->
+    <button onclick="app.openEditor()" class="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-warm-800 dark:bg-stone-100 dark:text-stone-900 text-warm-50 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform active:scale-95" title="寫新日記">
+        <i class="fa-solid fa-pen-nib"></i>
+    </button>
+
+    <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
+        <p>拾光手札 (Mood & Blog Journal) &copy; 2026. Mobile Reader Mode.</p>
+    </footer>
+
+    <!-- 操作手冊 Modal -->
+    <div id="manualModal" class="fixed inset-0 z-50 bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 hidden overflow-y-auto">
+        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col border border-warm-200 dark:border-darkBorder fade-in">
+            <div class="px-6 py-5 border-b border-warm-100 dark:border-darkBorder flex items-center justify-between">
+                <h3 class="serif-title text-lg sm:text-xl font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-warm-500"></i>
+                    <span>拾光手札行動操作手冊</span>
+                </h3>
+                <button onclick="app.closeManualModal()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-warm-700 dark:text-stone-300 leading-relaxed font-sans flex-grow">
+                <div class="space-y-1.5">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">1</span>
+                        手機隨身瀏覽與搜尋
+                    </h4>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">在支援資料夾讀寫的瀏覽器（如 Android Chrome 或電腦端）中點擊「選擇資料夾」，即可隨時隨地用手機搜尋、篩選與閱讀所有歷年手札。</p>
+                </div>
+                <div class="space-y-1.5">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">2</span>
+                        手札風格分類
+                    </h4>
+                    <ul class="text-warm-600 dark:text-stone-400 pl-11 space-y-1 list-disc">
+                        <li><strong class="text-warm-800 dark:text-stone-200">圖文札記</strong>：精簡俐落的日常記錄。</li>
+                        <li><strong class="text-warm-800 dark:text-stone-200">影像紀錄</strong>：強調攝影作品與光影。</li>
+                        <li><strong class="text-warm-800 dark:text-stone-200">隨筆光影</strong>：文藝與美學筆記。</li>
+                        <li><strong class="text-warm-800 dark:text-stone-200">生活足跡</strong>：工作行程與足跡。</li>
+                    </ul>
+                </div>
+                <div class="space-y-1.5">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">3</span>
+                        跨裝置與 Obsidian 同步
+                    </h4>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">本系統完美相容 Obsidian 年份子資料夾架構（例如 `2026/`），建議搭配雲端硬碟或 Obsidian Sync 讓手機與電腦資料保持一致。</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
+                <button onclick="app.closeManualModal()" class="px-6 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full transition-all shadow-sm">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯器 Modal -->
+    <div id="editorModal" class="fixed inset-0 z-50 bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 hidden overflow-y-auto">
+        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-warm-200 dark:border-darkBorder fade-in">
+            <div class="px-6 py-5 border-b border-warm-100 dark:border-darkBorder flex items-center justify-between">
+                <h3 id="editorModalTitle" class="serif-title text-lg sm:text-xl font-bold text-warm-900 dark:text-stone-100">撰寫新日記</h3>
+                <button onclick="app.closeEditor()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-grow text-xs sm:text-sm">
+                <input type="hidden" id="editPostId">
+                <input type="hidden" id="editOldFolder">
+                <input type="hidden" id="editOldYearFolder">
+                <div>
+                    <label class="block text-[11px] sm:text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">文章標題</label>
+                    <input type="text" id="postTitle" placeholder="今天發生了什麼特別的事嗎？..." class="w-full px-4 py-3 bg-warm-50 dark:bg-stone-900 border border-warm-200 dark:border-darkBorder rounded-2xl text-warm-900 dark:text-stone-100 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-warm-400 text-sm sm:text-base transition-all font-medium">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div>
+                        <label class="block text-[11px] sm:text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">日期</label>
+                        <input type="date" id="postDate" class="w-full px-3.5 py-3 bg-warm-50 dark:bg-stone-900 border border-warm-200 dark:border-darkBorder rounded-2xl text-warm-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-warm-400 text-xs sm:text-sm transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] sm:text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">心情標籤</label>
+                        <select id="postMood" class="w-full px-3.5 py-3 bg-warm-50 dark:bg-stone-900 border border-warm-200 dark:border-darkBorder rounded-2xl text-warm-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-warm-400 text-xs sm:text-sm transition-all">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] sm:text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">手札風格</label>
+                        <select id="postCategory" class="w-full px-3.5 py-3 bg-warm-50 dark:bg-stone-900 border border-warm-200 dark:border-darkBorder rounded-2xl text-warm-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-warm-400 text-xs sm:text-sm transition-all">
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-[11px] sm:text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider">心情內文與段落照片</label>
+                        <label class="px-3 py-1 bg-warm-100 dark:bg-stone-800 hover:bg-warm-200 text-warm-700 dark:text-stone-300 rounded-lg text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-image"></i>
+                            <span>插入照片</span>
+                            <input type="file" id="inlineImageInput" accept="image/*" class="hidden" onchange="app.insertImageToContent(event)">
+                        </label>
+                    </div>
+                    <textarea id="postContent" rows="7" placeholder="寫下早晨、午後與夜晚的點滴..." class="w-full px-4 py-3 bg-warm-50 dark:bg-stone-900 border border-warm-200 dark:border-darkBorder rounded-2xl text-warm-900 dark:text-stone-100 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-warm-400 text-xs sm:text-sm transition-all leading-relaxed font-sans"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end space-x-3 rounded-b-3xl">
+                <button onclick="app.closeEditor()" class="px-5 py-2.5 bg-white dark:bg-stone-800 hover:bg-warm-100 dark:hover:bg-stone-700 border border-warm-300 dark:border-darkBorder text-warm-700 dark:text-stone-300 text-xs font-medium rounded-full transition-all">取消</button>
+                <button onclick="app.savePost()" class="px-6 py-2.5 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full shadow-sm transition-all">儲存至資料夾</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 檢視 Modal -->
+    <div id="viewModal" class="fixed inset-0 z-50 bg-warm-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 hidden overflow-y-auto">
+        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-warm-200 dark:border-darkBorder fade-in">
+            <div class="px-5 sm:px-6 py-4 border-b border-warm-100 dark:border-darkBorder flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span id="viewMoodBadge" class="px-3 py-1 bg-warm-100 dark:bg-stone-800 text-warm-800 dark:text-stone-200 rounded-full text-xs font-medium flex items-center gap-1.5"></span>
+                    <span id="viewDate" class="text-xs text-warm-500 dark:text-stone-400 font-sans"></span>
+                </div>
+                <button onclick="app.closeViewModal()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 sm:p-8 overflow-y-auto space-y-5 flex-grow">
+                <h2 id="viewTitle" class="serif-title text-xl sm:text-2xl font-bold text-warm-900 dark:text-stone-100 leading-snug"></h2>
+                <div id="viewContent" class="text-warm-800 dark:text-stone-300 leading-relaxed text-sm sm:text-base space-y-4 font-sans"></div>
+            </div>
+            <div class="px-5 sm:px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-between rounded-b-3xl">
+                <div class="text-[11px] sm:text-xs text-warm-400 dark:text-stone-500" id="viewUpdatedAt">本機檔案</div>
+                <div class="flex items-center space-x-2">
+                    <button id="viewEditBtn" class="px-3.5 py-1.5 bg-white dark:bg-stone-800 hover:bg-warm-100 dark:hover:bg-stone-700 border border-warm-300 dark:border-darkBorder text-warm-700 dark:text-stone-300 text-xs font-medium rounded-full transition-all flex items-center gap-1">
+                        <i class="fa-solid fa-pen"></i>
+                        <span>編輯</span>
+                    </button>
+                    <button id="viewDeleteBtn" class="px-3.5 py-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 text-xs font-medium rounded-full transition-all flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>刪除</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定 Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-50 bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-md w-full p-6 border border-warm-200 dark:border-darkBorder fade-in space-y-6">
+            <div class="flex items-center justify-between border-b border-warm-100 dark:border-darkBorder pb-4">
+                <h3 class="serif-title text-lg font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-warm-500"></i>
+                    <span>設定與偏好</span>
+                </h3>
+                <button onclick="app.closeSettings()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-5 text-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">外觀模式 (Theme)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="app.setThemeMode('auto')" id="themeAutoBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-circle-half-stroke"></i> 自動</button>
+                        <button onclick="app.setThemeMode('light')" id="themeLightBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-sun"></i> 白天</button>
+                        <button onclick="app.setThemeMode('dark')" id="themeDarkBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-moon"></i> 深色</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">文章列表檢視</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="app.setViewMode('grid')" id="viewGridBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-table-cells"></i> 卡片網格</button>
+                        <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-20 sm:bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-xs sm:max-w-sm bg-warm-900 text-warm-50 dark:bg-stone-100 dark:text-stone-900 px-4 sm:px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 text-xs sm:text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">操作成功</span>
+    </div>
+
+    <script>
+        const MOODS = [
+            { id: 'happy', name: '開心', emoji: '😊', color: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-900' },
+            { id: 'calm', name: '平靜', emoji: '🌿', color: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900' },
+            { id: 'thoughtful', name: '思索', emoji: '🤔', color: 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-900' },
+            { id: 'inspired', name: '靈感', emoji: '💡', color: 'bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-950/50 dark:text-yellow-300 dark:border-yellow-900' },
+            { id: 'melancholy', name: '憂鬱', emoji: '🌧️', color: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-900' },
+            { id: 'energetic', name: '充實', emoji: '🔥', color: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-900' },
+            { id: 'tired', name: '疲憊', emoji: '🌙', color: 'bg-stone-100 text-stone-700 border-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700' }
+        ];
+
+        const CATEGORIES = [
+            { id: 'note', name: '圖文札記', icon: 'fa-feather' },
+            { id: 'photo', name: '影像紀錄', icon: 'fa-camera' },
+            { id: 'light', name: '隨筆光影', icon: 'fa-sun' },
+            { id: 'life', name: '生活足跡', icon: 'fa-footprints' }
+        ];
+
+        class BlogJournalApp {
+            constructor() {
+                this.rootDirHandle = null;
+                this.posts = [];
+                this.currentFilter = 'all';
+                this.searchQuery = '';
+                this.stagedImages = {};
+                this.viewMode = 'grid';
+                this.themeMode = 'auto';
+                this.init();
+            }
+
+            init() {
+                this.loadSettings();
+                this.renderMoodFilters();
+                this.renderSelectOptions();
+                this.renderPosts();
+                this.updateStats();
+                this.applyTheme();
+                this.checkPlatform();
+            }
+
+            checkPlatform() {
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile && !window.showDirectoryPicker) {
+                    document.getElementById('deviceModeHint').textContent = '行動瀏覽模式 (建議用 Chrome 讀取)';
+                }
+            }
+
+            loadSettings() {
+                try {
+                    const settings = JSON.parse(localStorage.getItem('shiguang_settings') || '{}');
+                    if (settings.viewMode) this.viewMode = settings.viewMode;
+                    if (settings.themeMode) this.themeMode = settings.themeMode;
+                } catch (e) {}
+            }
+
+            saveSettings() {
+                try {
+                    localStorage.setItem('shiguang_settings', JSON.stringify({
+                        viewMode: this.viewMode,
+                        themeMode: this.themeMode
+                    }));
+                } catch (e) {}
+            }
+
+            async pickDirectory() {
+                if (!window.showDirectoryPicker) {
+                    alert('目前使用的瀏覽器（如 iOS Safari）不支援直接讀寫本機資料夾 API。建議在電腦端使用，或在 Android 裝置上使用 Chrome 瀏覽器！');
+                    return;
+                }
+
+                try {
+                    this.rootDirHandle = await window.showDirectoryPicker();
+                    document.getElementById('dirLabel').innerText = this.rootDirHandle.name;
+                    this.showToast(`成功連結資料夾：${this.rootDirHandle.name}`);
+                    await this.loadPostsFromFolder();
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        this.showToast('無法取得資料夾權限', 'error');
+                    }
+                }
+            }
+
+            async loadPostsFromFolder() {
+                if (!this.rootDirHandle) return;
+                this.posts = [];
+
+                for await (const [name, entry] of this.rootDirHandle.entries()) {
+                    if (entry.kind === 'directory') {
+                        if (/^\d{4}$/.test(name)) {
+                            const yearDirHandle = entry;
+                            for await (const [subName, subEntry] of yearDirHandle.entries()) {
+                                if (subEntry.kind === 'directory') {
+                                    await this.parseAndAddPost(subEntry, name);
+                                }
+                            }
+                        } else {
+                            await this.parseAndAddPost(entry, null);
+                        }
+                    }
+                }
+
+                this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                this.renderPosts();
+                this.updateStats();
+            }
+
+            async parseAndAddPost(subDir, yearFolder) {
+                try {
+                    const mdFileHandle = await subDir.getFileHandle('note.md');
+                    const file = await mdFileHandle.getFile();
+                    const contentText = await file.text();
+
+                    const postData = this.parseMarkdownPost(subDir.name, contentText);
+                    postData.folderName = subDir.name;
+                    postData.yearFolder = yearFolder;
+                    postData.subDirHandle = subDir;
+
+                    postData.imagesMap = {};
+                    for await (const [imgName, imgEntry] of subDir.entries()) {
+                        if (imgEntry.kind === 'file') {
+                            const lower = imgName.toLowerCase();
+                            if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp')) {
+                                const imgFile = await imgEntry.getFile();
+                                postData.imagesMap[imgName] = URL.createObjectURL(imgFile);
+                            }
+                        }
+                    }
+
+                    const firstImgKey = Object.keys(postData.imagesMap)[0];
+                    postData.coverImage = firstImgKey ? postData.imagesMap[firstImgKey] : '';
+
+                    this.posts.push(postData);
+                } catch (e) {}
+            }
+
+            parseMarkdownPost(folderName, text) {
+                let title = folderName.slice(11) || folderName;
+                let mood = 'happy';
+                let date = folderName.slice(0, 10);
+                let category = 'note';
+                let rawContent = text;
+
+                if (text.includes('## 內文\n')) {
+                    const parts = text.split('## 內文\n');
+                    const headerPart = parts[0];
+                    rawContent = parts.slice(1).join('## 內文\n').trim();
+
+                    const lines = headerPart.split('\n');
+                    lines.forEach(line => {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('# ')) title = trimmed.replace('# ', '').trim();
+                        if (trimmed.includes('心情ID：')) mood = trimmed.split('心情ID：')[1].trim();
+                        if (trimmed.includes('分類ID：')) category = trimmed.split('分類ID：')[1].trim();
+                        if (trimmed.includes('日期：')) {
+                            const dParts = trimmed.split('日期：')[1].trim().split(' ');
+                            if (dParts[0]) date = dParts[0];
+                        }
+                    });
+                } else {
+                    const lines = text.split('\n');
+                    const contentLines = [];
+                    lines.forEach(line => {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('# ')) {
+                            title = trimmed.replace('# ', '').trim();
+                        } else if (trimmed.includes('心情ID：')) {
+                            mood = trimmed.split('心情ID：')[1].trim();
+                        } else if (trimmed.includes('分類ID：')) {
+                            category = trimmed.split('分類ID：')[1].trim();
+                        } else if (trimmed.includes('日期：')) {
+                            const dParts = trimmed.split('日期：')[1].trim().split(' ');
+                            if (dParts[0]) date = dParts[0];
+                        } else if (trimmed.startsWith('- 心情：') || trimmed.startsWith('- 日期：') || trimmed.startsWith('- 心情ID：') || trimmed.startsWith('- 分類：')) {
+                            // 略過
+                        } else {
+                            contentLines.push(line);
+                        }
+                    });
+                    rawContent = contentLines.join('\n').trim();
+                }
+
+                let cleanExcerpt = rawContent.replace(/!\[.*?\]\(.*?\)/g, '').replace(/[#*`_>-]/g, '').trim();
+
+                return { 
+                    id: folderName, 
+                    title: title.replace(/[#*`_>-]/g, '').trim(), 
+                    mood, 
+                    date, 
+                    category,
+                    content: rawContent, 
+                    cleanExcerpt,
+                    coverImage: '' 
+                };
+            }
+
+            applyTheme() {
+                const htmlEl = document.documentElement;
+                let isDark = false;
+                if (this.themeMode === 'dark') isDark = true;
+                else if (this.themeMode === 'light') isDark = false;
+                else isDark = new Date().getHours() >= 18 || new Date().getHours() < 6;
+
+                if (isDark) htmlEl.classList.add('dark');
+                else htmlEl.classList.remove('dark');
+            }
+
+            setThemeMode(mode) {
+                this.themeMode = mode;
+                this.saveSettings();
+                this.applyTheme();
+                this.updateSettingsUI();
+                this.showToast('已切換外觀模式');
+            }
+
+            setViewMode(mode) {
+                this.viewMode = mode;
+                this.saveSettings();
+                this.updateSettingsUI();
+                this.renderPosts();
+                this.showToast(`已切換為${mode === 'grid' ? '卡片網格' : '條列清單'}`);
+            }
+
+            updateSettingsUI() {
+                ['auto', 'light', 'dark'].forEach(m => {
+                    const btn = document.getElementById(`theme${m.charAt(0).toUpperCase() + m.slice(1)}Btn`);
+                    if (btn) btn.className = `py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${this.themeMode === m ? 'bg-warm-800 text-white border-warm-800 dark:bg-stone-100 dark:text-stone-900' : 'border-warm-200 dark:border-darkBorder hover:bg-warm-100 dark:hover:bg-stone-800'}`;
+                });
+                ['grid', 'list'].forEach(m => {
+                    const btn = document.getElementById(`view${m.charAt(0).toUpperCase() + m.slice(1)}Btn`);
+                    if (btn) btn.className = `py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${this.viewMode === m ? 'bg-warm-800 text-white border-warm-800 dark:bg-stone-100 dark:text-stone-900' : 'border-warm-200 dark:border-darkBorder hover:bg-warm-100 dark:hover:bg-stone-800'}`;
+                });
+            }
+
+            renderMoodFilters() {
+                const container = document.getElementById('moodFiltersContainer');
+                let html = `<button onclick="app.setFilter('all')" class="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-medium transition-all flex items-center space-x-1.5 shrink-0 ${this.currentFilter === 'all' ? 'bg-warm-800 text-white dark:bg-stone-100 dark:text-stone-900 shadow-sm' : 'bg-warm-100 dark:bg-stone-800 text-warm-700 dark:text-stone-300 hover:bg-warm-200'}"><span>全部心情</span></button>`;
+                MOODS.forEach(m => {
+                    html += `<button onclick="app.setFilter('${m.id}')" class="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-medium transition-all flex items-center space-x-1.5 shrink-0 ${this.currentFilter === m.id ? 'bg-warm-800 text-white dark:bg-stone-100 dark:text-stone-900 shadow-sm' : 'bg-warm-100 dark:bg-stone-800 text-warm-700 dark:text-stone-300 hover:bg-warm-200'}"><span>${m.emoji}</span><span>${m.name}</span></button>`;
+                });
+                container.innerHTML = html;
+            }
+
+            renderSelectOptions() {
+                const moodSelect = document.getElementById('postMood');
+                moodSelect.innerHTML = MOODS.map(m => `<option value="${m.id}">${m.emoji} ${m.name}</option>`).join('');
+
+                const catSelect = document.getElementById('postCategory');
+                catSelect.innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            }
+
+            setFilter(moodId) {
+                this.currentFilter = moodId;
+                this.renderMoodFilters();
+                this.renderPosts();
+            }
+
+            handleSearch(query) {
+                this.searchQuery = query.trim().toLowerCase();
+                this.renderPosts();
+            }
+
+            updateStats() {
+                document.getElementById('totalCount').textContent = this.posts.length;
+            }
+
+            getMoodObj(moodId) {
+                return MOODS.find(m => m.id === moodId) || MOODS[0];
+            }
+
+            getCategoryObj(catId) {
+                return CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
+            }
+
+            renderPosts() {
+                const container = document.getElementById('postsContainer');
+                const emptyState = document.getElementById('emptyState');
+
+                let filtered = this.posts.filter(p => {
+                    const matchMood = this.currentFilter === 'all' || p.mood === this.currentFilter;
+                    const matchSearch = !this.searchQuery || p.title.toLowerCase().includes(this.searchQuery) || p.content.toLowerCase().includes(this.searchQuery);
+                    return matchMood && matchSearch;
+                });
+
+                filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                let html = '';
+
+                if (this.viewMode === 'grid') {
+                    container.className = 'grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6';
+                    filtered.forEach(post => {
+                        const mood = this.getMoodObj(post.mood);
+                        const cat = this.getCategoryObj(post.category);
+                        const excerpt = post.cleanExcerpt.length > 90 ? post.cleanExcerpt.substring(0, 90) + '...' : post.cleanExcerpt;
+                        
+                        html += `
+                            <article onclick="app.openViewModal('${post.id}')" class="bg-white dark:bg-darkCard border border-warm-200/80 dark:border-darkBorder rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between cursor-pointer group">
+                                <div>
+                                    ${post.coverImage ? `<div class="mb-4 rounded-2xl overflow-hidden h-38 sm:h-40 bg-warm-50 dark:bg-stone-900 border border-warm-100 dark:border-darkBorder"><img src="${post.coverImage}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"></div>` : ''}
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${mood.color}">
+                                            <span>${mood.emoji}</span>
+                                            <span>${mood.name}</span>
+                                        </span>
+                                        <time class="text-xs text-warm-400 dark:text-stone-500 font-sans">${post.date}</time>
+                                    </div>
+                                    <h4 class="serif-title text-lg sm:text-xl font-bold text-warm-900 dark:text-stone-100 group-hover:text-warm-700 transition-colors mb-2 line-clamp-1">${escapeHtml(post.title)}</h4>
+                                    <p class="text-xs sm:text-sm text-warm-600 dark:text-stone-300 line-clamp-3 leading-relaxed mb-4">${escapeHtml(excerpt)}</p>
+                                </div>
+                                <div class="pt-4 border-t border-warm-100 dark:border-darkBorder flex items-center justify-between text-xs text-warm-400 dark:text-stone-500">
+                                    <div class="flex items-center gap-1.5"><i class="fa-solid ${cat.icon} text-warm-500"></i><span>${cat.name}</span></div>
+                                    <span class="font-medium text-warm-600 dark:text-warm-300 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">閱讀全文 <i class="fa-solid fa-arrow-right text-[10px]"></i></span>
+                                </div>
+                            </article>
+                        `;
+                    });
+                } else {
+                    container.className = 'space-y-4';
+                    filtered.forEach(post => {
+                        const mood = this.getMoodObj(post.mood);
+                        const excerpt = post.cleanExcerpt.length > 120 ? post.cleanExcerpt.substring(0, 120) + '...' : post.cleanExcerpt;
+                        
+                        html += `
+                            <article onclick="app.openViewModal('${post.id}')" class="bg-white dark:bg-darkCard border border-warm-200/80 dark:border-darkBorder rounded-3xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row gap-4 sm:gap-5 items-start justify-between cursor-pointer group">
+                                <div class="space-y-2 flex-1">
+                                    <div class="flex items-center space-x-3 text-xs text-warm-400 dark:text-stone-500">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${mood.color}"><span>${mood.emoji}</span><span>${mood.name}</span></span>
+                                        <span>${post.date}</span>
+                                    </div>
+                                    <h4 class="serif-title text-base sm:text-xl font-bold text-warm-900 dark:text-stone-100 group-hover:text-warm-700 transition-colors">${escapeHtml(post.title)}</h4>
+                                    <p class="text-xs sm:text-sm text-warm-600 dark:text-stone-300 line-clamp-2 leading-relaxed">${escapeHtml(excerpt)}</p>
+                                </div>
+                                ${post.coverImage ? `<img src="${post.coverImage}" class="w-full sm:w-28 sm:h-28 object-cover rounded-2xl border border-warm-200 dark:border-darkBorder shrink-0">` : ''}
+                            </article>
+                        `;
+                    });
+                }
+                container.innerHTML = html;
+            }
+
+            openEditor(postId = null) {
+                if (!this.rootDirHandle) {
+                    alert('請先點擊頂部的「選擇資料夾」來連結筆記目錄！');
+                    return;
+                }
+
+                const modal = document.getElementById('editorModal');
+                document.getElementById('editPostId').value = '';
+                document.getElementById('editOldFolder').value = '';
+                document.getElementById('editOldYearFolder').value = '';
+                document.getElementById('postTitle').value = '';
+                document.getElementById('postDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('postMood').value = 'happy';
+                document.getElementById('postCategory').value = 'note';
+                document.getElementById('postContent').value = '';
+                this.stagedImages = {};
+
+                if (postId) {
+                    document.getElementById('editorModalTitle').textContent = '編輯日記';
+                    const post = this.posts.find(p => p.id === postId);
+                    if (post) {
+                        document.getElementById('editPostId').value = post.id;
+                        document.getElementById('editOldFolder').value = post.folderName;
+                        document.getElementById('editOldYearFolder').value = post.yearFolder || '';
+                        document.getElementById('postTitle').value = post.title;
+                        document.getElementById('postDate').value = post.date;
+                        document.getElementById('postMood').value = post.mood;
+                        document.getElementById('postCategory').value = post.category || 'note';
+                        document.getElementById('postContent').value = post.content;
+                    }
+                } else {
+                    document.getElementById('editorModalTitle').textContent = '撰寫新日記';
+                }
+
+                modal.classList.remove('hidden');
+            }
+
+            closeEditor() {
+                document.getElementById('editorModal').classList.add('hidden');
+            }
+
+            insertImageToContent(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (file.size > 10 * 1024 * 1024) {
+                    this.showToast('圖片檔案過大', 'error');
+                    return;
+                }
+
+                const uniqueName = `img_${Date.now()}_${file.name}`;
+                this.stagedImages[uniqueName] = file;
+
+                const textarea = document.getElementById('postContent');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+
+                const markdownImageTag = `\n![${file.name}](${uniqueName})\n`;
+                textarea.value = text.substring(0, start) + markdownImageTag + text.substring(end);
+                textarea.focus();
+                textarea.selectionStart = textarea.selectionEnd = start + markdownImageTag.length;
+
+                event.target.value = '';
+                this.showToast('已將照片插入游標處');
+            }
+
+            async savePost() {
+                if (!this.rootDirHandle) {
+                    this.showToast('尚未連結資料夾', 'error');
+                    return;
+                }
+
+                const oldFolder = document.getElementById('editOldFolder').value;
+                const oldYearFolder = document.getElementById('editOldYearFolder').value;
+                const title = document.getElementById('postTitle').value.trim();
+                const date = document.getElementById('postDate').value;
+                const moodId = document.getElementById('postMood').value;
+                const moodObj = this.getMoodObj(moodId);
+                const categoryId = document.getElementById('postCategory').value;
+                const catObj = this.getCategoryObj(categoryId);
+                let content = document.getElementById('postContent').value.trim();
+
+                if (!title) {
+                    this.showToast('請填寫文章標題', 'error');
+                    return;
+                }
+                if (!content) {
+                    this.showToast('請填寫內文', 'error');
+                    return;
+                }
+
+                const yearStr = date.split('-')[0];
+                const newFolderName = `${date}-${title.replace(/[\/\\?%*:|"<>]/g, '')}`;
+
+                try {
+                    const yearDirHandle = await this.rootDirHandle.getDirectoryHandle(yearStr, { create: true });
+                    const subDirHandle = await yearDirHandle.getDirectoryHandle(newFolderName, { create: true });
+
+                    if (oldFolder && (oldFolder !== newFolderName || oldYearFolder !== yearStr)) {
+                        try {
+                            if (oldYearFolder) {
+                                const oldYearHandle = await this.rootDirHandle.getDirectoryHandle(oldYearFolder);
+                                await oldYearHandle.removeEntry(oldFolder, { recursive: true });
+                            } else {
+                                await this.rootDirHandle.removeEntry(oldFolder, { recursive: true });
+                            }
+                        } catch (e) {}
+                    }
+
+                    for (const [fileName, fileObj] of Object.entries(this.stagedImages)) {
+                        const imgHandle = await subDirHandle.getFileHandle(fileName, { create: true });
+                        const writableImg = await imgHandle.createWritable();
+                        await writableImg.write(fileObj);
+                        await writableImg.close();
+                    }
+
+                    const mdHandle = await subDirHandle.getFileHandle('note.md', { create: true });
+                    const writableMd = await mdHandle.createWritable();
+                    const mdContent = `# ${title}\n\n- 日期：${date}\n- 心情：${moodObj.emoji} ${moodObj.name}\n- 心情ID：${moodId}\n- 分類：${catObj.name}\n- 分類ID：${categoryId}\n\n## 內文\n\n${content}\n`;
+                    await writableMd.write(mdContent);
+                    await writableMd.close();
+
+                    this.showToast('已成功儲存日記！');
+                    this.closeEditor();
+                    await this.loadPostsFromFolder();
+                } catch (err) {
+                    console.error(err);
+                    this.showToast('儲存失敗', 'error');
+                }
+            }
+
+            openViewModal(postId) {
+                const post = this.posts.find(p => p.id === postId);
+                if (!post) return;
+
+                const mood = this.getMoodObj(post.mood);
+                document.getElementById('viewMoodBadge').innerHTML = `<span>${mood.emoji}</span><span>${mood.name}</span>`;
+                document.getElementById('viewDate').textContent = post.date;
+                document.getElementById('viewTitle').textContent = post.title;
+
+                let parsedContent = escapeHtml(post.content);
+                if (post.imagesMap) {
+                    for (const [fileName, blobUrl] of Object.entries(post.imagesMap)) {
+                        const regex = new RegExp(`!\\[.*?\\]\\(${fileName}\\)`, 'g');
+                        parsedContent = parsedContent.replace(regex, `<div class="my-4 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${blobUrl}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`);
+                    }
+                }
+
+                document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>');
+
+                document.getElementById('viewEditBtn').onclick = () => {
+                    this.closeViewModal();
+                    this.openEditor(post.id);
+                };
+                document.getElementById('viewDeleteBtn').onclick = () => {
+                    this.deletePost(post.id);
+                };
+
+                document.getElementById('viewModal').classList.remove('hidden');
+            }
+
+            closeViewModal() {
+                document.getElementById('viewModal').classList.add('hidden');
+            }
+
+            async deletePost(postId) {
+                if (confirm('確定要在資料夾中刪除這篇日記嗎？')) {
+                    const post = this.posts.find(p => p.id === postId);
+                    if (post && post.folderName && this.rootDirHandle) {
+                        try {
+                            if (post.yearFolder) {
+                                const yearHandle = await this.rootDirHandle.getDirectoryHandle(post.yearFolder);
+                                await yearHandle.removeEntry(post.folderName, { recursive: true });
+                            } else {
+                                await this.rootDirHandle.removeEntry(post.folderName, { recursive: true });
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }
+                    this.posts = this.posts.filter(p => p.id !== postId);
+                    this.closeViewModal();
+                    this.renderPosts();
+                    this.updateStats();
+                    this.showToast('日記已刪除');
+                }
+            }
+
+            openManualModal() {
+                document.getElementById('manualModal').classList.remove('hidden');
+            }
+
+            closeManualModal() {
+                document.getElementById('manualModal').classList.add('hidden');
+            }
+
+            openSettings() {
+                this.updateSettingsUI();
+                document.getElementById('settingsModal').classList.remove('hidden');
+            }
+
+            closeSettings() {
+                document.getElementById('settingsModal').classList.add('hidden');
+            }
+
+            switchHome() {
+                this.currentFilter = 'all';
+                this.searchQuery = '';
+                document.getElementById('searchInput').value = '';
+                this.renderMoodFilters();
+                this.renderPosts();
+            }
+
+            showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const msgEl = document.getElementById('toastMessage');
+                const iconEl = document.getElementById('toastIcon');
+
+                msgEl.textContent = message;
+                iconEl.className = type === 'error' ? 'fa-solid fa-circle-exclamation text-red-400' : 'fa-solid fa-circle-check text-emerald-400';
+
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        const app = new BlogJournalApp();
+    </script>
+</body>
+</html>
