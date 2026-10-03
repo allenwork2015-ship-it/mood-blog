@@ -143,6 +143,8 @@
         </div>
     </header>
 
+    <button id="resumeDirectoryBtn" hidden onclick="app.resumeDirectory()" class="mx-auto mt-3 max-w-full px-4 py-3 rounded-full bg-warm-700 text-white text-sm" style="display:none;overflow-wrap:anywhere"></button>
+
     <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         
         <section class="bg-white dark:bg-darkCard border border-warm-200 dark:border-darkBorder rounded-3xl p-5 sm:p-8 shadow-sm transition-colors">
@@ -237,11 +239,11 @@
                         <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">3</span>
                         跨裝置與 Obsidian 同步
                     </h4>
-                    <p class="text-warm-600 dark:text-stone-400 pl-7">Google Drive 模式可直接讀寫雲端筆記，刪除會將整個文章資料夾移至垃圾桶。使用前請在設定中填入授權用戶端 ID 及筆記根資料夾網址。<br>本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">Google Drive 模式可直接讀寫雲端筆記，刪除會將整個文章資料夾移至垃圾桶。首次使用時，OAuth 用戶端 ID 已預設填入，只需在「設定與偏好」填入登入帳號有權限存取的筆記根資料夾網址並儲存。之後在同一瀏覽器按「Google Drive」，選擇帳號登入即可；更換筆記資料夾請回到「設定與偏好」修改。<br>本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
                 </div>
                 <div class="space-y-2">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">4．建立 Google OAuth 用戶端 ID（首次設定）</h4>
-                    <p class="text-warm-600 dark:text-stone-400">建議先用電腦設定。已建立用戶端的使用者可直接跳到第 5 節；同一個用戶端 ID 可供手機及電腦使用。</p>
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">4．自建 Google OAuth 用戶端 ID（進階設定）</h4>
+                    <p class="text-warm-600 dark:text-stone-400">網站已提供預設 OAuth 用戶端 ID，一般使用者可直接跳到第 5 節，不必自行建立。若使用預設用戶端時帳號尚未獲准使用測試版，請聯絡網站管理者加入測試使用者。需要自行部署或使用自己的用戶端時，再依以下步驟設定；建議先用電腦操作，同一個用戶端 ID 可供手機及電腦使用。</p>
                     <ol class="list-decimal pl-5 space-y-3">
                         <li>開啟 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" class="underline">Google Cloud Console</a>，建立專案（例如 <code>shiguang-journal</code>），並確認上方選到該專案。</li>
                         <li>在上方搜尋 <span lang="en">Google Drive API</span>，進入後按「啟用」。若已顯示「管理」，表示已啟用。</li>
@@ -267,10 +269,12 @@
                         <li>在 Google Drive 開啟筆記根資料夾，複製網址。請選包含年份資料夾的根目錄，例如「拾光手札」，不要選單篇文章目錄。也可以先連接空的根目錄再新增日記。
                             <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all">https://drive.google.com/drive/folders/你的資料夾ID</code>
                         </li>
-                        <li>從 GitHub Pages 網址開啟網站，按齒輪進入設定。第一欄貼上「Google OAuth 用戶端 ID」，第二欄貼上「筆記根資料夾網址」，按「儲存設定」→「登入並連接」。</li>
-                        <li>選擇第 4 節加入的測試帳號，依登入畫面完成授權。成功後顯示「Google Drive 雲端讀寫模式」。若資料夾權限不足，會顯示唯讀模式。</li>
-                        <li>按「寫新日記」即可新增文章及插入照片；儲存會直接寫入雲端。文章檢視中的「編輯」可修改內容，改標題或年份會保留原照片；「刪除」會將整個文章資料夾與照片移至 Google Drive 垃圾桶。</li>
-                        <li>其他裝置修改後，在設定中按「重新讀取」。設定需在每台裝置各填一次；重新整理頁面或授權過期後需再次登入，不會自動背景同步。切換不同資料來源前，請先儲存或複製未完成內文。</li>
+                        <li><strong>首次連線：</strong>從 GitHub Pages 網址開啟網站，按「Google Drive」。尚未設定筆記資料夾時，會開啟「設定與偏好」。第一欄「Google OAuth 用戶端 ID」已預設填入，可保留原值；第二欄填入登入帳號有權限存取的「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。也可直接按右上角齒輪進入設定。</li>
+                        <li>選擇有權限存取該資料夾的 Google 帳號，依登入畫面完成授權。用戶端處於測試模式時，帳號須先加入該用戶端的測試使用者清單。成功後顯示「Google Drive 雲端讀寫模式」。若資料夾權限不足，會顯示唯讀模式。</li>
+                        <li><strong>之後登入：</strong>同一裝置、同一瀏覽器及相同網站會記住設定，按頁面上方「Google Drive」，選擇 Google 帳號即可，不必重填用戶端 ID 與資料夾網址；Google 要求時仍須完成授權。</li>
+                        <li><strong>更換筆記資料夾：</strong>按右上角齒輪進入「設定與偏好」→「Google Drive 設定」，修改「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。登入帳號必須有新資料夾的存取權；只修改此欄位不會授予或更改 Google Drive 的分享權限，也不會搬移原有日記。</li>
+                        <li>按「寫新日記」即可新增文章及插入照片；儲存會直接寫入雲端。文章檢視中的「編輯」可修改內容，改標題或年份會保留內文引用的照片；從內文移除照片並儲存成功後，對應照片會移至垃圾桶，圖卡封面依內文第一張可載入的照片顯示；「刪除」會將整個文章資料夾與照片移至 Google Drive 垃圾桶。</li>
+                        <li>其他裝置修改後，在設定中按「重新讀取」。筆記資料夾設定需在每台裝置或不同瀏覽器各填一次；清除網站資料或使用無痕模式時，可能需要重新設定。重新整理頁面或授權過期後，按「Google Drive」再次登入即可，不會自動背景同步。切換不同資料來源前，請先儲存或複製未完成內文。</li>
                     </ol>
                 </div>
                 <div class="space-y-2">
@@ -470,6 +474,7 @@
                 this.updateStats();
                 this.applyTheme();
                 this.checkPlatform();
+                this.connectionReady = this.restoreDirectory();
             }
 
             checkPlatform() {
@@ -536,7 +541,7 @@
                                     post.imagesMap[relative] = URL.createObjectURL(file);
                                 }
                             }
-                            post.coverImage = Object.values(post.imagesMap)[0] || '';
+                            post.coverImage = this.postCover(post);
                         } catch (error) { skipped++; console.error(error); }
                     }
                     this.closeEditor();
@@ -575,7 +580,76 @@
                 } catch (e) {}
             }
 
+            async directoryStore(value, write = false) {
+                const db = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open('shiguang_directory', 1);
+                    request.onupgradeneeded = () => request.result.createObjectStore('handles');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                try {
+                    return await new Promise((resolve, reject) => {
+                        const tx = db.transaction('handles', write ? 'readwrite' : 'readonly');
+                        const store = tx.objectStore('handles');
+                        const request = write ? store.put(value, 'last') : store.get('last');
+                        tx.oncomplete = () => resolve(request.result);
+                        tx.onerror = () => reject(tx.error);
+                        tx.onabort = () => reject(tx.error || new Error('資料夾設定儲存中止'));
+                    });
+                } finally { db.close(); }
+            }
+
+            async restoreDirectory() {
+                if (typeof window.showDirectoryPicker !== 'function') return;
+                try {
+                    const handle = await this.directoryStore();
+                    if (!handle) return;
+                    this.savedDirectory = handle;
+                    if (await handle.queryPermission({mode: 'readwrite'}) === 'granted') {
+                        await this.activateDirectory(handle);
+                    } else {
+                        this.showDirectoryResume();
+                    }
+                } catch (error) {
+                    if (this.savedDirectory) this.showDirectoryResume();
+                    console.warn('無法自動恢復資料夾', error);
+                }
+            }
+
+            showDirectoryResume() {
+                const button = document.getElementById('resumeDirectoryBtn');
+                button.textContent = '恢復連線：' + this.savedDirectory.name;
+                button.hidden = false;
+                button.style.display = 'block';
+            }
+
+            async resumeDirectory() {
+                if (this.driveBusy || !this.savedDirectory) return;
+                try {
+                    if (await this.savedDirectory.requestPermission({mode: 'readwrite'}) !== 'granted') {
+                        this.showToast('尚未取得資料夾權限，請允許存取或選擇其他資料夾', 'error');
+                        return;
+                    }
+                    await this.activateDirectory(this.savedDirectory);
+                } catch (error) {
+                    this.showToast('資料夾無法恢復，請確認磁碟已連線或重新選擇資料夾', 'error');
+                }
+            }
+
+            async activateDirectory(handle) {
+                this.rootDirHandle = handle;
+                this.sourceMode = 'local';
+                this.readOnly = false;
+                this.closeEditor();
+                this.closeViewModal();
+                this.checkPlatform();
+                document.getElementById('dirLabel').textContent = handle.name;
+                await this.loadPostsFromFolder();
+                document.getElementById('resumeDirectoryBtn').style.display = 'none';
+            }
+
             async pickDirectory() {
+                await this.connectionReady;
                 if (this.driveBusy) { this.showToast('雲端操作進行中，請稍候', 'error'); return; }
                 if (typeof window.showDirectoryPicker !== 'function') {
                     const input = document.getElementById('directoryInput');
@@ -589,15 +663,12 @@
                 }
 
                 try {
-                    this.rootDirHandle = await window.showDirectoryPicker();
-                    this.sourceMode = 'local';
-                    this.readOnly = false;
-                    this.closeEditor();
-                    this.closeViewModal();
-                    this.checkPlatform();
-                    document.getElementById('dirLabel').innerText = this.rootDirHandle.name;
-                    this.showToast(`成功連結資料夾：${this.rootDirHandle.name}`);
-                    await this.loadPostsFromFolder();
+                    const handle = await window.showDirectoryPicker({mode: 'readwrite'});
+                    await this.activateDirectory(handle);
+                    this.savedDirectory = handle;
+                    try { await this.directoryStore(handle, true); }
+                    catch (error) { this.showToast('已連結，但瀏覽器無法記住資料夾；重新整理後需再選取', 'error'); return; }
+                    this.showToast(`成功連結並記住資料夾：${handle.name}`);
                 } catch (err) {
                     if (err.name !== 'AbortError') {
                         this.showToast('無法取得資料夾權限', 'error');
@@ -652,8 +723,7 @@
                         }
                     }
 
-                    const firstImgKey = Object.keys(postData.imagesMap)[0];
-                    postData.coverImage = firstImgKey ? postData.imagesMap[firstImgKey] : '';
+                    postData.coverImage = this.postCover(postData);
 
                     this.posts.push(postData);
                 } catch (e) {}
@@ -1073,7 +1143,11 @@
             }
 
             getDriveConfig() {
-                try { return JSON.parse(localStorage.getItem('shiguang_drive') || '{}'); } catch (error) { return {}; }
+                const defaultClientId = '384338936806-n425ahs2bjuqs8f7ev259ps157nciltq.apps.googleusercontent.com';
+                try {
+                    const config = JSON.parse(localStorage.getItem('shiguang_drive') || '{}') || {};
+                    return {...config, clientId: config.clientId || defaultClientId};
+                } catch (error) { return {clientId: defaultClientId}; }
             }
 
             saveDriveConfig() {
@@ -1093,6 +1167,7 @@
                 if (!config.clientId || !config.folderId) { this.openSettings(); this.showToast('請先儲存 Google Drive 設定', 'error'); return; }
                 if (location.protocol !== 'https:' && location.hostname !== 'localhost') return this.showToast('請由 GitHub Pages 的 HTTPS 網址登入 Google Drive', 'error');
                 if (!window.google?.accounts?.oauth2) return this.showToast('Google 登入元件尚未載入，請稍後重試或檢查網路', 'error');
+                await this.connectionReady;
                 this.driveBusy = true;
                 try {
                     const response = await new Promise((resolve, reject) => {
@@ -1115,6 +1190,7 @@
                     if (this.sourceMode !== 'drive' || this.driveRoot?.id !== root.id) this.closeEditor();
                     this.closeViewModal(); this.releasePostImages();
                     this.posts = posts; this.rootDirHandle = null; this.driveRoot = root;
+                    document.getElementById('resumeDirectoryBtn').style.display = 'none';
                     this.sourceMode = 'drive'; this.readOnly = !root.capabilities?.canAddChildren;
                     document.getElementById('dirLabel').textContent = root.name + '（雲端）';
                     this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings();
@@ -1147,6 +1223,15 @@
                 return files;
             }
 
+            imagePaths(content) {
+                return Array.from(content.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g), match => match[1].trim());
+            }
+
+            postCover(post) {
+                const path = this.imagePaths(post.content).find(path => post.imagesMap[path]);
+                return path ? post.imagesMap[path] : '';
+            }
+
             async fetchDrivePosts(rootId) {
                 const posts = [];
                 const folderType = 'application/vnd.google-apps.folder';
@@ -1158,26 +1243,46 @@
                     const note = notes[0];
                     const text = await this.driveRequest('files/' + note.id + '?alt=media&supportsAllDrives=true', {}, 'text');
                     const post = this.parseMarkdownPost(folder.name, text);
-                    Object.assign(post, {id: folder.id, folderName: folder.name, yearFolder, driveFolder: folder, driveNote: note, imagesMap: {}});
+                    Object.assign(post, {id: folder.id, folderName: folder.name, yearFolder, driveFolder: folder, driveNote: note, imagesMap: {}, driveImages: {}});
                     posts.push(post);
+                    const referenced = new Set(this.imagePaths(post.content));
                     const images = async (items, prefix = '') => {
                         for (const file of items) {
-                            if (file.mimeType === folderType) await images(await this.driveChildren(file.id), prefix + file.name + '/');
-                            else if (/\.(jpe?g|png|webp|gif|avif|bmp|svg)$/i.test(file.name)) {
+                            if (file.mimeType === folderType) {
+                                const subpath = prefix + file.name + '/';
+                                if ([...referenced].some(path => path.startsWith(subpath))) await images(await this.driveChildren(file.id), subpath);
+                            }
+                            else if (referenced.has(prefix + file.name) && /\.(jpe?g|png|webp|gif|avif|bmp|svg)$/i.test(file.name)) {
                                 const blob = await this.driveRequest('files/' + file.id + '?alt=media&supportsAllDrives=true', {}, 'blob');
                                 post.imagesMap[prefix + file.name] = URL.createObjectURL(blob);
+                                post.driveImages[prefix + file.name] = file.id;
                             }
                         }
                     };
-                    await images(entries); post.coverImage = Object.values(post.imagesMap)[0] || '';
+                    await images(entries); post.coverImage = this.postCover(post);
                 };
+                const started = performance.now();
                 try {
+                    const jobs = [];
                     for (const folder of await this.driveChildren(rootId)) {
                         if (folder.mimeType !== folderType) continue;
                         if (/^\d{4}$/.test(folder.name)) {
-                            for (const child of await this.driveChildren(folder.id)) if (child.mimeType === folderType) await addPost(child, folder.name);
-                        } else await addPost(folder, null);
+                            for (const child of await this.driveChildren(folder.id)) if (child.mimeType === folderType) jobs.push({folder: child, year: folder.name});
+                        } else jobs.push({folder, year: null});
                     }
+                    let cursor = 0;
+                    let failure = null;
+                    const worker = async () => {
+                        while (!failure && cursor < jobs.length) {
+                            const job = jobs[cursor++];
+                            try { await addPost(job.folder, job.year); }
+                            catch (error) { failure = error; }
+                        }
+                    };
+                    // Wait for every active worker before cleaning up object URLs on failure.
+                    await Promise.all(Array.from({length: Math.min(4, jobs.length)}, worker));
+                    if (failure) throw failure;
+                    this.driveLoadStats = {posts: posts.length, images: posts.reduce((count, post) => count + Object.keys(post.imagesMap).length, 0), milliseconds: Math.round(performance.now() - started)};
                     return posts.sort((a, b) => new Date(b.date) - new Date(a.date));
                 } catch (error) { this.releasePostImages(posts); throw error; }
             }
@@ -1235,6 +1340,10 @@
                 if (!title || !content || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return this.showToast('請填寫標題、日期及內文', 'error');
                 const post = this.posts.find(item => item.id === value('editPostId'));
                 if (value('editPostId') && !post) return this.showToast('文章資料已更新，請重新開啟編輯', 'error');
+                const referencedImages = new Set(this.imagePaths(content));
+                const removedImages = post ? [...new Set(this.imagePaths(post.content))]
+                    .filter(path => !referencedImages.has(path) && post.driveImages?.[path])
+                    .map(path => ({path, id: post.driveImages[path]})) : [];
                 this.driveBusy = true; let saved = false;
                 try {
                     const year = await this.driveFolder(this.driveRoot.id, date.slice(0,4));
@@ -1253,6 +1362,7 @@
                     // Upload photographs before publishing Markdown so it never references a failed upload.
                     const children = await this.driveChildren(folder.id);
                     for (const [imageName, image] of Object.entries(this.stagedImages)) {
+                        if (!referencedImages.has(imageName)) continue;
                         const matches = children.filter(file => file.name === imageName);
                         if (matches.length > 1) throw new Error('圖片檔名重複：' + imageName);
                         await this.driveUpload(folder.id, imageName, image, matches[0]?.id);
@@ -1269,11 +1379,20 @@
                         await this.driveRequest('files/' + folder.id + '?' + query, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
                     }
                     saved = true;
+                    let cleanupFailures = 0;
+                    for (const image of removedImages) {
+                        try {
+                            await this.driveRequest('files/' + image.id + '?supportsAllDrives=true', {
+                                method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({trashed: true})
+                            });
+                        } catch (error) { cleanupFailures++; console.warn('照片移至垃圾桶失敗', image.path, error); }
+                    }
                     this.driveDraft = null;
                     if (post) post.driveNote.modifiedTime = note.modifiedTime;
                     this.closeEditor();
                     await this.reloadDrivePosts();
-                    this.showToast('已儲存至 Google Drive');
+                    this.showToast(cleanupFailures ? `日記已儲存，但 ${cleanupFailures} 張照片未能移至垃圾桶；圖卡已依內文更新` : '已儲存至 Google Drive' + (removedImages.length ? '，移除的照片已移至垃圾桶' : ''), cleanupFailures ? 'error' : 'success');
                 } catch (error) { this.showToast((saved ? '已儲存，但重新讀取失敗：' : '儲存未全部完成，內文仍保留：') + error.message, 'error'); }
                 finally { this.driveBusy = false; }
             }
