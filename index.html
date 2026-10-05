@@ -150,7 +150,8 @@
     <section class="max-w-5xl w-full mx-auto px-4 mt-4" aria-label="離線日記">
         <div class="flex flex-wrap gap-2 items-center">
             <button onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
-            <button onclick="app.syncOffline()" class="px-4 py-3 rounded-full border text-sm">同步待傳日記</button>
+            <button onclick="app.importLocalToDrive()" class="px-4 py-3 rounded-full border text-sm">將本機日記加入雲端待傳</button>
+            <button onclick="app.syncOffline(true)" class="px-4 py-3 rounded-full border text-sm">同步待傳日記</button>
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
         </div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
@@ -227,85 +228,46 @@
                 </button>
             </div>
             <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-warm-700 dark:text-stone-300 leading-relaxed font-sans flex-grow">
-                <div class="space-y-1.5">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
-                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">1</span>
-                        手機隨身瀏覽與搜尋
-                    </h4>
-                    <p class="text-warm-600 dark:text-stone-400 pl-7">點擊「選擇資料夾」，選取包含年份／文章資料夾／note.md 的筆記目錄。支援直接讀寫的瀏覽器（如桌面 Chrome／Edge）可新增、編輯與刪除；其他支援資料夾選取的瀏覽器（包含新版 iPhone／iPad Safari）使用唯讀模式，可搜尋、篩選與閱讀文章及照片。若無法選取資料夾，請更新系統與瀏覽器，或改用支援此功能的裝置。</p>
-                </div>
-                <div class="space-y-1.5">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
-                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">2</span>
-                        手札風格分類
-                    </h4>
-                    <ul class="text-warm-600 dark:text-stone-400 pl-11 space-y-1 list-disc">
-                        <li><strong class="text-warm-800 dark:text-stone-200">圖文札記</strong>：精簡俐落的日常記錄。</li>
-                        <li><strong class="text-warm-800 dark:text-stone-200">影像紀錄</strong>：強調攝影作品與光影。</li>
-                        <li><strong class="text-warm-800 dark:text-stone-200">隨筆光影</strong>：文藝與美學筆記。</li>
-                        <li><strong class="text-warm-800 dark:text-stone-200">生活足跡</strong>：工作行程與足跡。</li>
+                <section class="space-y-2">
+                    <h4 class="font-bold text-sm">1．開始使用</h4>
+                    <p><strong>本機：</strong>按「選擇資料夾」，選取日記根目錄。電腦支援的瀏覽器可讀寫；手機本機模式通常只能閱讀。</p>
+                    <p><strong>Google Drive：</strong>首次按「Google Drive」，在設定填入你有權限存取的筆記資料夾網址，儲存後登入；OAuth 用戶端 ID 已預設。之後通常只需選帳號。同一分頁重新整理會嘗試恢復有效授權，過期時需再登入。</p>
+                    <p>更換雲端資料夾：齒輪 →「Google Drive 設定」→ 修改網址 → 儲存 → 登入並連接。</p>
+                </section>
+                <section class="space-y-2">
+                    <h4 class="font-bold text-sm">2．寫作與閱讀</h4>
+                    <p>按筆尖或「寫新日記」新增文章，可插入照片；開啟日記後可編輯或刪除。雲端刪除文章會將文章資料夾移至垃圾桶；移除內文照片並儲存後，對應照片也會移至垃圾桶。</p>
+                    <p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。雲端封面按頁載入，文章內其餘照片在開啟後載入。網頁視窗可按 X 或 Esc 關閉；關閉不會自動儲存。</p>
+                </section>
+                <section class="space-y-2">
+                    <h4 class="font-bold text-sm">3．離線與同步</h4>
+                    <p>先連網設定雲端資料夾，等顯示「離線網站已就緒」。沒網路時按「新增離線日記」，文字與照片會先存於此裝置；待同步清單可展開查看。</p>
+                    <p>網頁開著、恢復網路且授權有效時會自動同步，也可按「同步待傳日記」。授權過期請重新登入；關閉網頁或鎖定手機後，不保證背景同步。</p>
+                    <p><strong>匯入本機日記：</strong>設定雲端資料夾 → 選取本機資料夾 →「將本機日記加入雲端待傳」→ 登入 Google Drive。這是單向複製，本機原檔保留，後續修改不會自動覆寫雲端。</p>
+                    <p>已同步副本預設收合，確認雲端內容後可移除本機副本。待傳日記綁定原設定資料夾；第一階段不支援離線修改或刪除既有雲端日記。</p>
+                </section>
+                <section class="space-y-2">
+                    <h4 class="font-bold text-sm">4．資料保存</h4>
+                    <p>待傳日記存於此裝置，正常重新整理或關閉後再開啟仍會保留。單獨刪除 Cookie 不會直接刪除日記，但「Cookie 與其他網站資料」等清除選項可能一併刪除日記、照片與設定。</p>
+                    <p><strong>清除網站資料前，請先確認全部日記已同步。</strong>避免使用無痕模式；換裝置或瀏覽器不會帶入本機副本。目前沒有待傳日記匯出備份功能，本機保存不等同雲端備份。</p>
+                </section>
+                <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
+                    <summary class="cursor-pointer font-semibold">進階設定</summary>
+                    <div class="mt-3 space-y-2">
+                        <p>本機筆記結構：根目錄／年份／文章資料夾／note.md，相容 Obsidian。Google Drive 的根目錄可先為空，再新增日記。</p>
+                        <p>一般使用者可保留預設 OAuth 用戶端 ID。自行部署或使用自己的用戶端時，請參考 <a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">完整設定說明（含 Google Cloud 步驟）</a>。</p>
+                        <p>目前授權範圍涵蓋整個 Drive，程式操作指定的筆記資料夾。請勿將用戶端密鑰放入網頁。</p>
+                    </div>
+                </details>
+                <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
+                    <summary class="cursor-pointer font-semibold">常見問題</summary>
+                    <ul class="mt-3 list-disc pl-5 space-y-2">
+                        <li><strong>Google 登入失敗：</strong>請使用正式 HTTPS 網址；測試版帳號需獲管理者加入測試使用者。origin_mismatch 表示網站來源與 OAuth 設定不符。</li>
+                        <li><strong>不能寫入：</strong>確認登入帳號具有資料夾編輯權限。修改資料夾網址不會變更 Drive 的分享權限。</li>
+                        <li><strong>待傳日記未同步：</strong>確認有網路、已登入且授權有效，並連接原設定資料夾；展開待傳日記可查看錯誤訊息。</li>
+                        <li><strong>其他裝置更新後沒看到：</strong>在設定按「重新讀取」。切換資料來源前先儲存尚未完成的內文。</li>
                     </ul>
-                </div>
-                <div class="space-y-1.5">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
-                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">3</span>
-                        跨裝置與 Obsidian 同步
-                    </h4>
-                    <p class="text-warm-600 dark:text-stone-400 pl-7">Google Drive 模式可直接讀寫雲端筆記，刪除會將整個文章資料夾移至垃圾桶。首次使用時，OAuth 用戶端 ID 已預設填入，只需在「設定與偏好」填入登入帳號有權限存取的筆記根資料夾網址並儲存。之後在同一瀏覽器按「Google Drive」，選擇帳號登入即可；更換筆記資料夾請回到「設定與偏好」修改。<br>本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
-                </div>
-                <div class="space-y-2">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">4．自建 Google OAuth 用戶端 ID（進階設定）</h4>
-                    <p class="text-warm-600 dark:text-stone-400">網站已提供預設 OAuth 用戶端 ID，一般使用者可直接跳到第 5 節，不必自行建立。若使用預設用戶端時帳號尚未獲准使用測試版，請聯絡網站管理者加入測試使用者。需要自行部署或使用自己的用戶端時，再依以下步驟設定；建議先用電腦操作，同一個用戶端 ID 可供手機及電腦使用。</p>
-                    <ol class="list-decimal pl-5 space-y-3">
-                        <li>開啟 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" class="underline">Google Cloud Console</a>，建立專案（例如 <code>shiguang-journal</code>），並確認上方選到該專案。</li>
-                        <li>在上方搜尋 <span lang="en">Google Drive API</span>，進入後按「啟用」。若已顯示「管理」，表示已啟用。</li>
-                        <li>從左上角選單進入「API 和服務」→「OAuth 同意畫面」，或直接開啟 <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener noreferrer" class="underline">Google Auth Platform 總覽</a>。</li>
-                        <li>首次使用按「開始使用」。應用程式名稱填「拾光手札」，支援及聯絡電子郵件填自己的信箱；一般個人 Gmail 帳號的目標對象選「外部」。依畫面完成條款確認並建立。已完成者可在左側「品牌」查看基本資料。</li>
-                        <li>點左側「目標對象」，維持發布狀態為「測試」。在「測試使用者」按「Add users／新增使用者」，加入實際登入日記網站的 Google 電子郵件並儲存。個人測試不需要按「發布應用程式」。</li>
-                        <li>點「資料存取權」→「新增或移除範圍」，選取下列完整 Drive 權限。找不到時可在手動新增範圍欄位貼上：
-                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all select-text">https://www.googleapis.com/auth/drive</code>
-                            按「更新」，再按頁面下方「Save／儲存」。完成後會在「您的受限制範圍」看到 <code>…/auth/drive</code>。
-                        </li>
-                        <li>點「用戶端」→「建立用戶端」。應用程式類型選「網頁應用程式」（手機也是透過網站使用），名稱填「拾光手札網站」。</li>
-                        <li>在「已授權的 JavaScript 來源」按「新增 URI」，此網站填：
-                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all select-text">https://allenwork2015-ship-it.github.io</code>
-                            只填通訊協定及網域，不加 <code>/mood-blog/</code>、<code>index.html</code> 或最後的斜線。若網站改用其他網域，請填實際來源。
-                        </li>
-                        <li>「已授權的重新導向 URI」留空，按「建立」。複製「用戶端 ID」旁的複製圖示，取得結尾為 <code class="break-all">.apps.googleusercontent.com</code> 的完整文字。不要複製用戶端密鑰。</li>
-                    </ol>
-                    <p class="text-warm-600 dark:text-stone-400">此版本要求完整 Drive 授權，授權能力涵蓋整個雲端硬碟；程式的文章操作使用你指定的筆記目錄。公開提供其他使用者使用時，需依 Google 的 OAuth 驗證要求辦理。網頁不需要用戶端密鑰，請勿將密鑰放進 HTML 或 GitHub。</p>
-                </div>
-                <div class="space-y-2">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">5．連接 Google Drive 與日常使用</h4>
-                    <ol class="list-decimal pl-5 space-y-2">
-                        <li>在 Google Drive 開啟筆記根資料夾，複製網址。請選包含年份資料夾的根目錄，例如「拾光手札」，不要選單篇文章目錄。也可以先連接空的根目錄再新增日記。
-                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all">https://drive.google.com/drive/folders/你的資料夾ID</code>
-                        </li>
-                        <li><strong>首次連線：</strong>從 GitHub Pages 網址開啟網站，按「Google Drive」。尚未設定筆記資料夾時，會開啟「設定與偏好」。第一欄「Google OAuth 用戶端 ID」已預設填入，可保留原值；第二欄填入登入帳號有權限存取的「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。也可直接按右上角齒輪進入設定。</li>
-                        <li>選擇有權限存取該資料夾的 Google 帳號，依登入畫面完成授權。用戶端處於測試模式時，帳號須先加入該用戶端的測試使用者清單。成功後顯示「Google Drive 雲端讀寫模式」。若資料夾權限不足，會顯示唯讀模式。</li>
-                        <li><strong>瀏覽分頁：</strong>每頁顯示 12 篇日記，超過 12 篇時顯示分頁控制。搜尋與心情篩選會套用全部日記，變更條件後回到第 1 頁。雲端連線先顯示文章文字，再載入目前頁面的封面；開啟文章後才載入其餘照片。</li>
-                        <li><strong>之後登入：</strong>同一裝置、同一瀏覽器及相同網站會記住設定，按頁面上方「Google Drive」，選擇 Google 帳號即可，不必重填用戶端 ID 與資料夾網址；Google 要求時仍須完成授權。</li>
-                        <li><strong>更換筆記資料夾：</strong>按右上角齒輪進入「設定與偏好」→「Google Drive 設定」，修改「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。登入帳號必須有新資料夾的存取權；只修改此欄位不會授予或更改 Google Drive 的分享權限，也不會搬移原有日記。</li>
-                        <li>按「寫新日記」即可新增文章及插入照片；儲存會直接寫入雲端。文章檢視中的「編輯」可修改內容，改標題或年份會保留內文引用的照片；從內文移除照片並儲存成功後，對應照片會移至垃圾桶，圖卡封面依內文第一張可載入的照片顯示；「刪除」會將整個文章資料夾與照片移至 Google Drive 垃圾桶。</li>
-                        <li>其他裝置修改後，在設定中按「重新讀取」。筆記資料夾設定需在每台裝置或不同瀏覽器各填一次；清除網站資料或使用無痕模式時，可能需要重新設定。重新整理頁面或授權過期後，按「Google Drive」再次登入即可，不會自動背景同步。切換不同資料來源前，請先儲存或複製未完成內文。</li>
-                    </ol>
-                </div>
-                <div class="space-y-2">
-                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">6．Google 登入常見問題</h4>
-                    <ul class="list-disc pl-5 space-y-2">
-                        <li><strong>400：origin_mismatch</strong>：網站網址與 JavaScript 來源不一致。回到「用戶端」修正來源並儲存，等待設定生效，再關閉錯誤視窗、重新整理網站登入。本網站正確來源為 <code class="break-all">https://allenwork2015-ship-it.github.io</code>。</li>
-                        <li><strong>帳號無法使用測試版</strong>：確認「目標對象」的測試使用者清單包含目前登入的帳號；組織帳號也可能受到管理員政策限制。</li>
-                        <li><strong>無法從本機 HTML 登入</strong>：請由 GitHub Pages 的 HTTPS 網址使用 Google Drive 功能；直接開啟電腦上的 HTML 可使用原有本機模式。</li>
-                        <li><strong>儲存或重新讀取失敗</strong>：檢查網路、授權是否過期，以及資料夾及檔案是否有編輯權限。部分上傳失敗時雲端可能已存在照片或文章，請先保留內文，再檢查或重試；新文章重試時保持原標題與日期。</li>
-                    </ul>
-                    <p><a href="https://developers.google.com/workspace/drive/api/quickstart/js" target="_blank" rel="noopener noreferrer" class="underline">Google 官方用戶端設定說明</a> · <a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth" target="_blank" rel="noopener noreferrer" class="underline">Drive 授權範圍說明</a></p>
-                </div>
-                <div class="space-y-2">
-                    <h4 class="font-bold text-sm">7．離線新增日記與照片</h4>
-                    <p>先連網開啟網站，等待離線快取完成，並設定 Google Drive 筆記資料夾。外出無網路時按「新增離線日記」，可寫文字及插入照片；儲存後會保留在此裝置，待傳清單可展開查看。第一階段僅支援離線新增，不支援離線修改或刪除既有雲端日記。</p>
-                    <p>網頁開著且恢復網路、Google 授權有效時會自動同步；也可按「同步待傳日記」。授權過期時請按 Google Drive 重新登入。待傳日記會綁定儲存時的筆記資料夾，更換資料夾後不會傳到新位置。鎖定手機或關閉網頁後不保證背景同步，下次開啟並登入會繼續。</p>
-                    <p>同步成功的本機副本仍保留，可確認雲端內容後自行移除。請勿清除網站資料，以免遺失尚未同步的日記；本機資料只保留在這台裝置，不等同雲端備份。離線開啟需使用 HTTPS 網站，並已完成首次快取。</p>
-                </div>
+                </details>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
                 <button onclick="app.closeManualModal()" class="px-6 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full transition-all shadow-sm">我知道了</button>
@@ -488,6 +450,19 @@
             }
 
             init() {
+                document.addEventListener('keydown', event => {
+                    if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return;
+                    const dialogs = [
+                        ['manualModal', () => this.closeManualModal()],
+                        ['editorModal', () => this.closeEditor()],
+                        ['viewModal', () => this.closeViewModal()],
+                        ['settingsModal', () => this.closeSettings()]
+                    ];
+                    const visible = dialogs.filter(([id]) => !document.getElementById(id).classList.contains('hidden'));
+                    if (!visible.length) return;
+                    event.preventDefault();
+                    visible[visible.length - 1][1]();
+                });
                 this.loadSettings();
                 this.renderMoodFilters();
                 this.renderSelectOptions();
@@ -495,7 +470,7 @@
                 this.updateStats();
                 this.applyTheme();
                 this.checkPlatform();
-                this.connectionReady = this.restoreDirectory();
+                this.connectionReady = this.restoreConnections();
                 this.offlineReady = this.refreshOffline();
                 window.addEventListener('online', () => this.syncOffline());
                 window.addEventListener('offline', () => this.refreshOffline());
@@ -627,6 +602,22 @@
                 } finally { db.close(); }
             }
 
+            clearDriveSession() {
+                try { sessionStorage.removeItem('shiguang_drive_session'); } catch (error) {}
+            }
+
+            async restoreConnections() {
+                const config = this.getDriveConfig();
+                let session;
+                try { session = JSON.parse(sessionStorage.getItem('shiguang_drive_session') || 'null'); } catch (error) {}
+                if (session && session.clientId === config.clientId && session.folderId === config.folderId && typeof session.token === 'string' && session.expires > Date.now() && session.expires <= Date.now() + 3600000) {
+                    if (navigator.onLine) await this.connectDrive(session);
+                    return;
+                }
+                this.clearDriveSession();
+                await this.restoreDirectory();
+            }
+
             async restoreDirectory() {
                 if (typeof window.showDirectoryPicker !== 'function') return;
                 try {
@@ -691,6 +682,7 @@
                 }
 
                 try {
+                    this.clearDriveSession();
                     const handle = await window.showDirectoryPicker({mode: 'readwrite'});
                     await this.activateDirectory(handle);
                     this.savedDirectory = handle;
@@ -1286,13 +1278,18 @@
                     this.offlinePreviewUrls = [];
                     const pending = entries.filter(e => e.status !== 'synced').length;
                     document.getElementById('offlineStatus').textContent = (navigator.onLine ? '已連網' : '離線') + `・${pending} 篇待同步` + (this.offlineSyncing ? '・同步中' : '') + (this.offlineShellReady ? '・離線網站已就緒' : '・離線網站尚未就緒');
-                    document.getElementById('offlineEntries').innerHTML = entries.sort((a,b) => b.created - a.created).map(e => {
+                    const renderEntry = e => {
                         const photos = Object.entries(e.images).map(([name, blob]) => {
                             const url = URL.createObjectURL(blob); this.offlinePreviewUrls.push(url);
                             return `<img src="${url}" alt="${escapeHtml(name)}" class="max-h-48 rounded-lg my-2">`;
                         }).join('');
                         return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${e.status === 'synced' ? '已同步' : '待同步'}${e.error ? '（同步未完成）' : ''}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
-                    }).join('');
+                    };
+                    entries.sort((a,b) => b.created - a.created);
+                    const waiting = entries.filter(e => e.status !== 'synced');
+                    const synced = entries.filter(e => e.status === 'synced');
+                    const wasOpen = document.getElementById('syncedOfflineCopies')?.open || false;
+                    document.getElementById('offlineEntries').innerHTML = waiting.map(renderEntry).join('') + (synced.length ? `<details id="syncedOfflineCopies" class="p-3 border rounded-xl" ${wasOpen ? 'open' : ''}><summary class="cursor-pointer">已同步副本（${synced.length} 篇）</summary><p class="text-xs mt-2">這些副本已同步至雲端；收合不會刪除資料，仍占用此裝置儲存空間。</p><div class="mt-2 space-y-2">${synced.map(renderEntry).join('')}</div></details>` : '');
                 } catch (error) { document.getElementById('offlineStatus').textContent = '無法存取本機儲存空間，請勿離線寫作'; }
             }
 
@@ -1301,6 +1298,33 @@
                 if (!entries.find(e => e.id === id && e.status === 'synced')) return;
                 if (!confirm('雲端已同步，移除此裝置的副本？')) return;
                 await this.offlineStore('delete', id); await this.refreshOffline();
+            }
+
+            async importLocalToDrive() {
+                if (this.driveBusy || this.importBusy) return this.showToast('目前操作進行中，請稍候', 'error');
+                if (this.sourceMode !== 'local' || !this.posts.length) return this.showToast('請先選擇本機資料夾並載入日記', 'error');
+                const config = this.getDriveConfig();
+                if (!config.folderId) { this.openSettings(); return this.showToast('請先設定雲端筆記資料夾，再匯入本機日記', 'error'); }
+                this.importBusy = true;
+                let added = 0;
+                try {
+                    const entries = await this.offlineStore('all');
+                    const sourceName = this.rootDirHandle?.name || document.getElementById('dirLabel').textContent;
+                    for (const post of [...this.posts]) {
+                        const images = {};
+                        for (const path of new Set(this.imagePaths(post.content))) {
+                            if (post.imagesMap[path]) images[path] = await (await fetch(post.imagesMap[path])).blob();
+                        }
+                        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([sourceName, post.yearFolder, post.folderName, post.title, post.date, post.mood, post.category, post.content])));
+                        const importKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2,'0')).join('');
+                        if (entries.some(e => e.importKey === importKey && e.rootId === config.folderId && e.clientId === config.clientId)) continue;
+                        const entry = {id: crypto.randomUUID(), importKey, rootId:config.folderId, clientId:config.clientId, title:post.title, date:post.date, content:post.content, mood:post.mood, category:post.category || 'note', images, created:Date.now(), status:'pending'};
+                        await this.offlineStore('put', entry); entries.push(entry); added++;
+                    }
+                    await this.refreshOffline();
+                    this.showToast(`已加入 ${added} 篇待傳日記，本機原檔保留；請按 Google Drive 登入完成同步`);
+                } catch (error) { await this.refreshOffline(); this.showToast(`已加入 ${added} 篇，其餘匯入失敗：` + error.message, 'error'); }
+                finally { this.importBusy = false; }
             }
 
             async saveOffline() {
@@ -1335,7 +1359,15 @@
                 }
             }
 
-            async syncOffline() {
+            async syncOffline(manual = false) {
+                if (manual) {
+                    if (!navigator.onLine) return this.showToast('目前離線，待傳日記仍保留', 'error');
+                    if (this.sourceMode !== 'drive' || !this.driveToken || Date.now() >= this.driveExpires) return this.showToast('請先按 Google Drive 登入，才能同步待傳日記', 'error');
+                    if (this.readOnly) return this.showToast('目前雲端資料夾沒有寫入權限', 'error');
+                    const pending = (await this.offlineStore('all')).filter(e => e.status !== 'synced');
+                    if (!pending.length) return this.showToast('沒有待同步的離線日記');
+                    if (!pending.some(e => e.rootId === this.driveRoot.id && e.clientId === this.getDriveConfig().clientId)) return this.showToast('待傳日記綁定其他資料夾，請切回原設定後同步', 'error');
+                }
                 if (this.offlineSyncing || this.driveBusy || !navigator.onLine || this.sourceMode !== 'drive' || this.readOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
                 const perform = async () => {
                     if (this.offlineSyncing || this.driveBusy) return;
@@ -1393,16 +1425,16 @@
                 catch (error) { this.showToast('無法儲存設定，請允許此網站使用本機儲存空間', 'error'); }
             }
 
-            async connectDrive() {
+            async connectDrive(resume = null) {
                 if (this.driveBusy) return;
                 const config = this.getDriveConfig();
                 if (!config.clientId || !config.folderId) { this.openSettings(); this.showToast('請先儲存 Google Drive 設定', 'error'); return; }
-                if (location.protocol !== 'https:' && location.hostname !== 'localhost') return this.showToast('請由 GitHub Pages 的 HTTPS 網址登入 Google Drive', 'error');
-                if (!window.google?.accounts?.oauth2) return this.showToast('Google 登入元件尚未載入，請稍後重試或檢查網路', 'error');
-                await this.connectionReady;
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return this.showToast('請由 GitHub Pages 的 HTTPS 網址登入 Google Drive', 'error');
+                if (!resume && !window.google?.accounts?.oauth2) return this.showToast('Google 登入元件尚未載入，請稍後重試或檢查網路', 'error');
+                if (!resume) await this.connectionReady;
                 this.driveBusy = true;
                 try {
-                    const response = await new Promise((resolve, reject) => {
+                    const response = resume ? {access_token: resume.token, expires_in: (resume.expires - Date.now() + 30000) / 1000} : await new Promise((resolve, reject) => {
                         const client = window.google.accounts.oauth2.initTokenClient({
                             client_id: config.clientId,
                             scope: 'https://www.googleapis.com/auth/drive',
@@ -1412,7 +1444,7 @@
                         });
                         client.requestAccessToken({prompt: 'select_account'});
                     });
-                    if (!window.google.accounts.oauth2.hasGrantedAllScopes(response, 'https://www.googleapis.com/auth/drive')) throw new Error('需要 Google Drive 讀寫授權');
+                    if (!resume && !window.google.accounts.oauth2.hasGrantedAllScopes(response, 'https://www.googleapis.com/auth/drive')) throw new Error('需要 Google Drive 讀寫授權');
                     this.driveToken = response.access_token;
                     this.driveExpires = Date.now() + Number(response.expires_in) * 1000 - 30000;
                     const root = await this.driveRequest('files/' + encodeURIComponent(config.folderId) + '?fields=id,name,mimeType,capabilities,trashed&supportsAllDrives=true');
@@ -1423,6 +1455,7 @@
                     this.closeViewModal(); this.releasePostImages();
                     this.posts = posts; this.rootDirHandle = null; this.driveRoot = root;
                     document.getElementById('resumeDirectoryBtn').style.display = 'none';
+                    try { sessionStorage.setItem('shiguang_drive_session', JSON.stringify({token:this.driveToken, expires:this.driveExpires, clientId:config.clientId, folderId:config.folderId})); } catch (error) {}
                     this.sourceMode = 'drive'; this.readOnly = !root.capabilities?.canAddChildren;
                     document.getElementById('dirLabel').textContent = root.name + '（雲端）';
                     this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings();
@@ -1438,7 +1471,7 @@
                     ...options, headers: {...options.headers, Authorization: 'Bearer ' + this.driveToken}
                 });
                 if (!response.ok) {
-                    if (response.status === 401) this.driveExpires = 0;
+                    if (response.status === 401) { this.driveExpires = 0; this.clearDriveSession(); }
                     const detail = await response.json().catch(() => ({}));
                     const error = new Error(response.status === 401 ? 'Google 授權已過期，請重新登入' : 'Google Drive 操作失敗：' + (detail.error?.message || response.status));
                     error.status = response.status; throw error;
@@ -1538,6 +1571,7 @@
 
             disconnectDrive() {
                 if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
+                this.clearDriveSession();
                 if (this.driveToken && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(this.driveToken, () => {});
                 this.driveToken = null; this.driveExpires = 0; this.driveRoot = null;
                 if (this.sourceMode === 'drive') {

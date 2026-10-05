@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="zh-TW"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拾光手札完整設定說明</title><style>body{max-width:800px;margin:24px auto;padding:0 20px;line-height:1.8;font-family:system-ui;color:#453c34}code{overflow-wrap:anywhere}a{color:#695b4e}</style><body><h1>拾光手札完整設定說明</h1><p><a href="./index.html">返回拾光手札</a></p>            <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-warm-700 dark:text-stone-300 leading-relaxed font-sans flex-grow">
+                <div class="space-y-1.5">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">1</span>
+                        手機隨身瀏覽與搜尋
+                    </h4>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">點擊「選擇資料夾」，選取包含年份／文章資料夾／note.md 的筆記目錄。支援直接讀寫的瀏覽器（如桌面 Chrome／Edge）可新增、編輯與刪除；其他支援資料夾選取的瀏覽器（包含新版 iPhone／iPad Safari）使用唯讀模式，可搜尋、篩選與閱讀文章及照片。若無法選取資料夾，請更新系統與瀏覽器，或改用支援此功能的裝置。</p>
+                </div>
+                <div class="space-y-1.5">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">2</span>
+                        手札風格分類
+                    </h4>
+                    <ul class="text-warm-600 dark:text-stone-400 pl-11 space-y-1 list-disc">
+                        <li><strong class="text-warm-800 dark:text-stone-200">圖文札記</strong>：精簡俐落的日常記錄。</li>
+                        <li><strong class="text-warm-800 dark:text-stone-200">影像紀錄</strong>：強調攝影作品與光影。</li>
+                        <li><strong class="text-warm-800 dark:text-stone-200">隨筆光影</strong>：文藝與美學筆記。</li>
+                        <li><strong class="text-warm-800 dark:text-stone-200">生活足跡</strong>：工作行程與足跡。</li>
+                    </ul>
+                </div>
+                <div class="space-y-1.5">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 flex items-center gap-2 text-sm">
+                        <span class="w-5 h-5 rounded-full bg-warm-200 dark:bg-stone-800 text-warm-800 dark:text-stone-200 flex items-center justify-center text-[10px] font-sans">3</span>
+                        跨裝置與 Obsidian 同步
+                    </h4>
+                    <p class="text-warm-600 dark:text-stone-400 pl-7">Google Drive 模式可直接讀寫雲端筆記，刪除會將整個文章資料夾移至垃圾桶。首次使用時，OAuth 用戶端 ID 已預設填入，只需在「設定與偏好」填入登入帳號有權限存取的筆記根資料夾網址並儲存。之後在同一瀏覽器按「Google Drive」，選擇帳號登入即可；更換筆記資料夾請回到「設定與偏好」修改。<br>本系統相容 Obsidian 年份子資料夾架構（例如 2026/文章資料夾/note.md）。唯讀模式載入的是本次選取的檔案，不會直接寫回或自動同步；資料更新後需重新選取資料夾，重新整理頁面後也需再次選取。雲端檔案請先確認可由「檔案」App 取得。</p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">4．自建 Google OAuth 用戶端 ID（進階設定）</h4>
+                    <p class="text-warm-600 dark:text-stone-400">網站已提供預設 OAuth 用戶端 ID，一般使用者可直接跳到第 5 節，不必自行建立。若使用預設用戶端時帳號尚未獲准使用測試版，請聯絡網站管理者加入測試使用者。需要自行部署或使用自己的用戶端時，再依以下步驟設定；建議先用電腦操作，同一個用戶端 ID 可供手機及電腦使用。</p>
+                    <ol class="list-decimal pl-5 space-y-3">
+                        <li>開啟 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" class="underline">Google Cloud Console</a>，建立專案（例如 <code>shiguang-journal</code>），並確認上方選到該專案。</li>
+                        <li>在上方搜尋 <span lang="en">Google Drive API</span>，進入後按「啟用」。若已顯示「管理」，表示已啟用。</li>
+                        <li>從左上角選單進入「API 和服務」→「OAuth 同意畫面」，或直接開啟 <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener noreferrer" class="underline">Google Auth Platform 總覽</a>。</li>
+                        <li>首次使用按「開始使用」。應用程式名稱填「拾光手札」，支援及聯絡電子郵件填自己的信箱；一般個人 Gmail 帳號的目標對象選「外部」。依畫面完成條款確認並建立。已完成者可在左側「品牌」查看基本資料。</li>
+                        <li>點左側「目標對象」，維持發布狀態為「測試」。在「測試使用者」按「Add users／新增使用者」，加入實際登入日記網站的 Google 電子郵件並儲存。個人測試不需要按「發布應用程式」。</li>
+                        <li>點「資料存取權」→「新增或移除範圍」，選取下列完整 Drive 權限。找不到時可在手動新增範圍欄位貼上：
+                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all select-text">https://www.googleapis.com/auth/drive</code>
+                            按「更新」，再按頁面下方「Save／儲存」。完成後會在「您的受限制範圍」看到 <code>…/auth/drive</code>。
+                        </li>
+                        <li>點「用戶端」→「建立用戶端」。應用程式類型選「網頁應用程式」（手機也是透過網站使用），名稱填「拾光手札網站」。</li>
+                        <li>在「已授權的 JavaScript 來源」按「新增 URI」，此網站填：
+                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all select-text">https://allenwork2015-ship-it.github.io</code>
+                            只填通訊協定及網域，不加 <code>/mood-blog/</code>、<code>index.html</code> 或最後的斜線。若網站改用其他網域，請填實際來源。
+                        </li>
+                        <li>「已授權的重新導向 URI」留空，按「建立」。複製「用戶端 ID」旁的複製圖示，取得結尾為 <code class="break-all">.apps.googleusercontent.com</code> 的完整文字。不要複製用戶端密鑰。</li>
+                    </ol>
+                    <p class="text-warm-600 dark:text-stone-400">此版本要求完整 Drive 授權，授權能力涵蓋整個雲端硬碟；程式的文章操作使用你指定的筆記目錄。公開提供其他使用者使用時，需依 Google 的 OAuth 驗證要求辦理。網頁不需要用戶端密鑰，請勿將密鑰放進 HTML 或 GitHub。</p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">5．連接 Google Drive 與日常使用</h4>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li>在 Google Drive 開啟筆記根資料夾，複製網址。請選包含年份資料夾的根目錄，例如「拾光手札」，不要選單篇文章目錄。也可以先連接空的根目錄再新增日記。
+                            <code class="block mt-2 p-2 rounded-lg bg-warm-100 dark:bg-stone-800 break-all">https://drive.google.com/drive/folders/你的資料夾ID</code>
+                        </li>
+                        <li><strong>首次連線：</strong>從 GitHub Pages 網址開啟網站，按「Google Drive」。尚未設定筆記資料夾時，會開啟「設定與偏好」。第一欄「Google OAuth 用戶端 ID」已預設填入，可保留原值；第二欄填入登入帳號有權限存取的「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。也可直接按右上角齒輪進入設定。</li>
+                        <li>選擇有權限存取該資料夾的 Google 帳號，依登入畫面完成授權。用戶端處於測試模式時，帳號須先加入該用戶端的測試使用者清單。成功後顯示「Google Drive 雲端讀寫模式」。若資料夾權限不足，會顯示唯讀模式。</li>
+                        <li><strong>瀏覽分頁：</strong>每頁顯示 12 篇日記，超過 12 篇時顯示分頁控制。搜尋與心情篩選會套用全部日記，變更條件後回到第 1 頁。雲端連線先顯示文章文字，再載入目前頁面的封面；開啟文章後才載入其餘照片。</li>
+                        <li><strong>之後登入：</strong>同一裝置、同一瀏覽器及相同網站會記住設定，按頁面上方「Google Drive」，選擇 Google 帳號即可，不必重填用戶端 ID 與資料夾網址；Google 要求時仍須完成授權。</li>
+                        <li><strong>更換筆記資料夾：</strong>按右上角齒輪進入「設定與偏好」→「Google Drive 設定」，修改「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。登入帳號必須有新資料夾的存取權；只修改此欄位不會授予或更改 Google Drive 的分享權限，也不會搬移原有日記。</li>
+                        <li>按「寫新日記」即可新增文章及插入照片；儲存會直接寫入雲端。文章檢視中的「編輯」可修改內容，改標題或年份會保留內文引用的照片；從內文移除照片並儲存成功後，對應照片會移至垃圾桶，圖卡封面依內文第一張可載入的照片顯示；「刪除」會將整個文章資料夾與照片移至 Google Drive 垃圾桶。</li>
+                        <li>其他裝置修改後，在設定中按「重新讀取」。筆記資料夾設定需在每台裝置或不同瀏覽器各填一次；清除網站資料或使用無痕模式時，可能需要重新設定。同一分頁重新整理時，會嘗試恢復尚未過期的 Google Drive 授權；授權過期或關閉分頁後，請按「Google Drive」再次登入，不會自動背景同步。切換不同資料來源前，請先儲存或複製未完成內文。</li>
+                    </ol>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-warm-900 dark:text-stone-100 text-sm">6．Google 登入常見問題</h4>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong>400：origin_mismatch</strong>：網站網址與 JavaScript 來源不一致。回到「用戶端」修正來源並儲存，等待設定生效，再關閉錯誤視窗、重新整理網站登入。本網站正確來源為 <code class="break-all">https://allenwork2015-ship-it.github.io</code>。</li>
+                        <li><strong>帳號無法使用測試版</strong>：確認「目標對象」的測試使用者清單包含目前登入的帳號；組織帳號也可能受到管理員政策限制。</li>
+                        <li><strong>無法從本機 HTML 登入</strong>：請由 GitHub Pages 的 HTTPS 網址使用 Google Drive 功能；直接開啟電腦上的 HTML 可使用原有本機模式。</li>
+                        <li><strong>儲存或重新讀取失敗</strong>：檢查網路、授權是否過期，以及資料夾及檔案是否有編輯權限。部分上傳失敗時雲端可能已存在照片或文章，請先保留內文，再檢查或重試；新文章重試時保持原標題與日期。</li>
+                    </ul>
+                    <p><a href="https://developers.google.com/workspace/drive/api/quickstart/js" target="_blank" rel="noopener noreferrer" class="underline">Google 官方用戶端設定說明</a> · <a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth" target="_blank" rel="noopener noreferrer" class="underline">Drive 授權範圍說明</a></p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-sm">7．離線新增日記與照片</h4>
+                    <p>先連網開啟網站，等待離線快取完成，並設定 Google Drive 筆記資料夾。外出無網路時按「新增離線日記」，可寫文字及插入照片；儲存後會保留在此裝置，待傳清單可展開查看。第一階段僅支援離線新增，不支援離線修改或刪除既有雲端日記。若要上傳本機資料夾的既有日記，先設定雲端筆記資料夾，再選擇本機資料夾，按「將本機日記加入雲端待傳」，最後按 Google Drive 登入。這是單向匯入，保留本機原檔；相同來源與文字內容的重複匯入會略過，內容變更後會新增另一份，不會覆寫雲端既有日記。</p>
+                    <p>網頁開著且恢復網路、Google 授權有效時會自動同步；也可按「同步待傳日記」。授權過期時請按 Google Drive 重新登入。待傳日記會綁定儲存時的筆記資料夾，更換資料夾後不會傳到新位置。鎖定手機或關閉網頁後不保證背景同步，下次開啟並登入會繼續。</p>
+                    <p>同步成功的本機副本集中於預設收合的「已同步副本」區塊，待同步日記仍直接顯示。收合僅節省頁面空間，副本仍保留在此裝置；可確認雲端內容後展開並自行移除。本機資料只保留在這台裝置，不等同雲端備份。離線開啟需使用 HTTPS 網站，並已完成首次快取。</p>
+                    <h5 class="font-semibold">待同步日記的保存與清除</h5>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong>重新整理或關閉網頁：</strong>待同步日記與照片存於此裝置的 IndexedDB 資料庫，正常情況下重新整理或關閉後再開啟仍會保留；四篇以上也一樣，並非只保留最新一篇。</li>
+                        <li><strong>單獨刪除 Cookie：</strong>不會直接刪除 IndexedDB 中的日記，但可能需要重新登入 Google。請先確認清除選項是否同時包含網站資料。</li>
+                        <li><strong>清除網站資料：</strong>「Cookie 與其他網站資料」、「清除此網站的資料」等選項可能一併刪除待同步日記、照片、連線設定及離線快取。清除前請先確認所有日記已同步至 Google Drive。</li>
+                        <li><strong>換裝置、瀏覽器或網站網址：</strong>不會自動帶入原裝置的本機副本；請回到原裝置與原瀏覽器，在相同網站完成同步。</li>
+                        <li><strong>無痕模式與儲存空間：</strong>無痕視窗關閉後可能失去資料；裝置空間不足或系統清理也可能影響保存。請避免以無痕模式保存待傳日記，並盡早同步重要內容。</li>
+                    </ul>
+                    <p>目前沒有待同步日記的匯出備份功能。若仍有待傳日記，請勿清除網站資料；本機保存不代表已有雲端備份。</p>
+                </div>
+            </div>
+</body></html>
