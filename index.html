@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#695b4e">
     <title>拾光手札 - MOOD & BLOG JOURNAL</title>
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./assets/tailwind.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -39,7 +41,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./assets/fontawesome.css">
     <style>
         body {
             font-family: 'Inter', 'Noto Serif TC', sans-serif;
@@ -145,6 +147,14 @@
 
     <button id="resumeDirectoryBtn" hidden onclick="app.resumeDirectory()" class="mx-auto mt-3 max-w-full px-4 py-3 rounded-full bg-warm-700 text-white text-sm" style="display:none;overflow-wrap:anywhere"></button>
 
+    <section class="max-w-5xl w-full mx-auto px-4 mt-4" aria-label="離線日記">
+        <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
+            <button onclick="app.syncOffline()" class="px-4 py-3 rounded-full border text-sm">同步待傳日記</button>
+            <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
+        </div>
+        <div id="offlineEntries" class="mt-3 space-y-2"></div>
+    </section>
     <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         
         <section class="bg-white dark:bg-darkCard border border-warm-200 dark:border-darkBorder rounded-3xl p-5 sm:p-8 shadow-sm transition-colors">
@@ -179,6 +189,8 @@
 
             <div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             </div>
+
+            <nav id="pagination" aria-label="日記分頁" class="mt-6 flex flex-wrap items-center justify-center gap-2" hidden></nav>
 
             <div id="emptyState" class="hidden py-16 sm:py-20 text-center bg-white dark:bg-darkCard border border-dashed border-warm-300 dark:border-darkBorder rounded-3xl px-4">
                 <div class="w-14 h-14 sm:w-16 sm:h-16 bg-warm-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto text-warm-400 text-xl sm:text-2xl mb-4">
@@ -271,6 +283,7 @@
                         </li>
                         <li><strong>首次連線：</strong>從 GitHub Pages 網址開啟網站，按「Google Drive」。尚未設定筆記資料夾時，會開啟「設定與偏好」。第一欄「Google OAuth 用戶端 ID」已預設填入，可保留原值；第二欄填入登入帳號有權限存取的「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。也可直接按右上角齒輪進入設定。</li>
                         <li>選擇有權限存取該資料夾的 Google 帳號，依登入畫面完成授權。用戶端處於測試模式時，帳號須先加入該用戶端的測試使用者清單。成功後顯示「Google Drive 雲端讀寫模式」。若資料夾權限不足，會顯示唯讀模式。</li>
+                        <li><strong>瀏覽分頁：</strong>每頁顯示 12 篇日記，超過 12 篇時顯示分頁控制。搜尋與心情篩選會套用全部日記，變更條件後回到第 1 頁。雲端連線先顯示文章文字，再載入目前頁面的封面；開啟文章後才載入其餘照片。</li>
                         <li><strong>之後登入：</strong>同一裝置、同一瀏覽器及相同網站會記住設定，按頁面上方「Google Drive」，選擇 Google 帳號即可，不必重填用戶端 ID 與資料夾網址；Google 要求時仍須完成授權。</li>
                         <li><strong>更換筆記資料夾：</strong>按右上角齒輪進入「設定與偏好」→「Google Drive 設定」，修改「筆記根資料夾網址或 ID」，按「儲存設定」→「登入並連接」。登入帳號必須有新資料夾的存取權；只修改此欄位不會授予或更改 Google Drive 的分享權限，也不會搬移原有日記。</li>
                         <li>按「寫新日記」即可新增文章及插入照片；儲存會直接寫入雲端。文章檢視中的「編輯」可修改內容，改標題或年份會保留內文引用的照片；從內文移除照片並儲存成功後，對應照片會移至垃圾桶，圖卡封面依內文第一張可載入的照片顯示；「刪除」會將整個文章資料夾與照片移至 Google Drive 垃圾桶。</li>
@@ -286,6 +299,12 @@
                         <li><strong>儲存或重新讀取失敗</strong>：檢查網路、授權是否過期，以及資料夾及檔案是否有編輯權限。部分上傳失敗時雲端可能已存在照片或文章，請先保留內文，再檢查或重試；新文章重試時保持原標題與日期。</li>
                     </ul>
                     <p><a href="https://developers.google.com/workspace/drive/api/quickstart/js" target="_blank" rel="noopener noreferrer" class="underline">Google 官方用戶端設定說明</a> · <a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth" target="_blank" rel="noopener noreferrer" class="underline">Drive 授權範圍說明</a></p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-bold text-sm">7．離線新增日記與照片</h4>
+                    <p>先連網開啟網站，等待離線快取完成，並設定 Google Drive 筆記資料夾。外出無網路時按「新增離線日記」，可寫文字及插入照片；儲存後會保留在此裝置，待傳清單可展開查看。第一階段僅支援離線新增，不支援離線修改或刪除既有雲端日記。</p>
+                    <p>網頁開著且恢復網路、Google 授權有效時會自動同步；也可按「同步待傳日記」。授權過期時請按 Google Drive 重新登入。待傳日記會綁定儲存時的筆記資料夾，更換資料夾後不會傳到新位置。鎖定手機或關閉網頁後不保證背景同步，下次開啟並登入會繼續。</p>
+                    <p>同步成功的本機副本仍保留，可確認雲端內容後自行移除。請勿清除網站資料，以免遺失尚未同步的日記；本機資料只保留在這台裝置，不等同雲端備份。離線開啟需使用 HTTPS 網站，並已完成首次快取。</p>
                 </div>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
@@ -458,6 +477,8 @@
                 this.driveBusy = false;
                 this.readOnly = typeof window.showDirectoryPicker !== 'function';
                 this.posts = [];
+                this.currentPage = 1;
+                this.pageSize = 12;
                 this.currentFilter = 'all';
                 this.searchQuery = '';
                 this.stagedImages = {};
@@ -475,6 +496,13 @@
                 this.applyTheme();
                 this.checkPlatform();
                 this.connectionReady = this.restoreDirectory();
+                this.offlineReady = this.refreshOffline();
+                window.addEventListener('online', () => this.syncOffline());
+                window.addEventListener('offline', () => this.refreshOffline());
+                this.offlineTimer = setInterval(() => this.syncOffline(), 60000);
+                if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+                    navigator.serviceWorker.register('./sw.js').then(() => navigator.serviceWorker.ready).then(() => { this.offlineShellReady = true; this.refreshOffline(); }).catch(() => this.showToast('離線網站快取尚未完成，請連網後重新開啟', 'error'));
+                }
             }
 
             checkPlatform() {
@@ -846,12 +874,14 @@
             }
 
             setFilter(moodId) {
+                this.currentPage = 1;
                 this.currentFilter = moodId;
                 this.renderMoodFilters();
                 this.renderPosts();
             }
 
             handleSearch(query) {
+                this.currentPage = 1;
                 this.searchQuery = query.trim().toLowerCase();
                 this.renderPosts();
             }
@@ -868,6 +898,61 @@
                 return CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
             }
 
+            goToPage(page) {
+                this.currentPage = page;
+                this.renderPosts();
+                const section = document.getElementById('postsContainer').parentElement;
+                const top = section.getBoundingClientRect().top + window.scrollY - document.querySelector('header').offsetHeight - 12;
+                window.scrollTo({top: Math.max(0, top), behavior: 'smooth'});
+            }
+
+            renderPagination(total, pages) {
+                const nav = document.getElementById('pagination');
+                nav.hidden = pages <= 1;
+                nav.style.display = pages <= 1 ? 'none' : '';
+                if (pages <= 1) { nav.innerHTML = ''; return; }
+                const button = (label, page, disabled = false, current = false) => `<button type="button" onclick="app.goToPage(${page})" ${disabled ? 'disabled' : ''} ${current ? 'aria-current="page"' : ''} class="min-w-[44px] min-h-[44px] px-3 rounded-full border border-warm-200 dark:border-darkBorder text-sm disabled:opacity-40 ${current ? 'bg-warm-800 text-white' : 'bg-white dark:bg-darkCard'}">${label}</button>`;
+                const numbers = [...new Set([1, this.currentPage - 1, this.currentPage, this.currentPage + 1, pages])].filter(n => n >= 1 && n <= pages).sort((a,b) => a-b);
+                let html = `<p class="w-full text-center text-xs text-warm-500 mb-1">共 ${total} 篇，第 ${this.currentPage}／${pages} 頁</p>` + button('上一頁', this.currentPage - 1, this.currentPage === 1);
+                numbers.forEach((n, i) => {
+                    if (i && n - numbers[i-1] > 1) html += '<span aria-hidden="true">…</span>';
+                    html += button(n, n, false, n === this.currentPage);
+                });
+                nav.innerHTML = html + button('下一頁', this.currentPage + 1, this.currentPage === pages);
+            }
+
+            queuePageCovers(posts) {
+                this.coverQueue ||= [];
+                this.coverWorkers ||= 0;
+                for (const post of posts) {
+                    if (!post.driveCoverPath || post.coverImage || post.coverPending || post.coverFailed) continue;
+                    post.coverPending = true;
+                    this.coverQueue.push(post);
+                }
+                const drain = async () => {
+                    this.coverWorkers++;
+                    try {
+                        while (this.coverQueue.length) {
+                            const post = this.coverQueue.shift();
+                            try {
+                                if (!this.posts.includes(post)) continue;
+                                const path = post.driveCoverPath;
+                                post.coverPromise = this.driveRequest('files/' + post.driveImages[path] + '?alt=media&supportsAllDrives=true', {}, 'blob');
+                                const blob = await post.coverPromise;
+                                if (!this.posts.includes(post)) continue;
+                                if (!post.imagesMap[path]) post.imagesMap[path] = URL.createObjectURL(blob);
+                                post.coverImage = this.postCover(post);
+                                this.renderPosts();
+                            } catch (error) {
+                                post.coverFailed = true;
+                                this.showToast('部分封面載入失敗，可在設定中重新讀取', 'error');
+                            } finally { post.coverPending = false; post.coverPromise = null; }
+                        }
+                    } finally { this.coverWorkers--; }
+                };
+                while (this.coverWorkers < 4 && this.coverQueue.length) drain();
+            }
+
             renderPosts() {
                 const container = document.getElementById('postsContainer');
                 const emptyState = document.getElementById('emptyState');
@@ -879,6 +964,10 @@
                 });
 
                 filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+                const pages = Math.max(1, Math.ceil(filtered.length / this.pageSize));
+                this.currentPage = Math.max(1, Math.min(this.currentPage, pages));
+                this.renderPagination(filtered.length, pages);
+                filtered = filtered.slice((this.currentPage - 1) * this.pageSize, this.currentPage * this.pageSize);
 
                 if (filtered.length === 0) {
                     container.innerHTML = '';
@@ -939,14 +1028,16 @@
                     });
                 }
                 container.innerHTML = html;
+                this.queuePageCovers(filtered);
             }
 
             openEditor(postId = null) {
                 if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
                 this.driveDraft = null;
                 this.driveEditVersion = null;
-                if (!this.allowWrite()) return;
-                if (!this.rootDirHandle && this.sourceMode !== 'drive') {
+                this.offlineNew = !!this.requestOffline || (!postId && this.sourceMode === 'drive');
+                if (!this.offlineNew && !this.allowWrite()) return;
+                if (!this.offlineNew && !this.rootDirHandle && this.sourceMode !== 'drive') {
                     alert('請先點擊頂部的「選擇資料夾」來連結筆記目錄！');
                     return;
                 }
@@ -1015,6 +1106,7 @@
             }
 
             async savePost() {
+                if (this.offlineNew && !document.getElementById('editPostId').value) return this.saveOffline();
                 if (!this.allowWrite()) return;
                 if (this.sourceMode === 'drive') return this.saveDrivePost();
                 if (!this.rootDirHandle) {
@@ -1081,10 +1173,27 @@
                 }
             }
 
+            async loadViewImages(post) {
+                if (post.imageLoadPromise) return post.imageLoadPromise;
+                post.imageLoadPromise = (async () => {
+                    if (post.coverPromise) { try { await post.coverPromise; } catch (error) {} }
+                    for (const [path, id] of Object.entries(post.driveImages || {})) {
+                        if (post.imagesMap[path]) continue;
+                        const blob = await this.driveRequest('files/' + id + '?alt=media&supportsAllDrives=true', {}, 'blob');
+                        // The source may have changed while the photograph was downloading.
+                        if (!this.posts.includes(post)) return;
+                        post.imagesMap[path] = URL.createObjectURL(blob);
+                    }
+                })();
+                try { await post.imageLoadPromise; }
+                finally { post.imageLoadPromise = null; }
+            }
+
             openViewModal(postId) {
                 const post = this.posts.find(p => p.id === postId);
                 if (!post) return;
 
+                this.viewPostId = postId;
                 const mood = this.getMoodObj(post.mood);
                 document.getElementById('viewMoodBadge').innerHTML = `<span>${mood.emoji}</span><span>${mood.name}</span>`;
                 document.getElementById('viewDate').textContent = post.date;
@@ -1096,7 +1205,7 @@
                     path = path.replace(/^\.\//, '');
                     const key = Object.keys(post.imagesMap || {}).find(name => escapeHtml(name) === path);
                     const url = key === undefined ? null : post.imagesMap[key];
-                    if (!url) return tag;
+                    if (!url) return key === undefined && Object.keys(post.driveImages || {}).some(name => escapeHtml(name) === path) ? '<div class="my-4 p-4 text-sm text-warm-500">照片載入中…</div>' : tag;
                     return `<div class="my-4 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${url}" alt="${alt}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`;
                 });
 
@@ -1111,9 +1220,17 @@
                 };
 
                 document.getElementById('viewModal').classList.remove('hidden');
+                if (Object.keys(post.driveImages || {}).some(path => !post.imagesMap[path])) {
+                    this.loadViewImages(post).then(() => {
+                        if (this.viewPostId === postId && this.posts.includes(post)) this.openViewModal(postId);
+                    }).catch(error => {
+                        if (this.viewPostId === postId) this.showToast('部分照片載入失敗，請關閉文章後重試：' + error.message, 'error');
+                    });
+                }
             }
 
             closeViewModal() {
+                this.viewPostId = null;
                 document.getElementById('viewModal').classList.add('hidden');
             }
 
@@ -1140,6 +1257,121 @@
                     this.updateStats();
                     this.showToast('日記已刪除');
                 }
+            }
+
+            async offlineStore(action, value) {
+                const db = await new Promise((resolve, reject) => {
+                    const r = indexedDB.open('shiguang_offline', 1);
+                    r.onupgradeneeded = () => r.result.createObjectStore('entries', {keyPath: 'id'});
+                    r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
+                });
+                try { return await new Promise((resolve, reject) => {
+                    const tx = db.transaction('entries', action === 'all' ? 'readonly' : 'readwrite');
+                    const store = tx.objectStore('entries');
+                    const r = action === 'all' ? store.getAll() : action === 'put' ? store.put(value) : store.delete(value);
+                    tx.oncomplete = () => resolve(r.result); tx.onabort = tx.onerror = () => reject(tx.error || new Error('本機儲存失敗'));
+                }); } finally { db.close(); }
+            }
+
+            openOfflineEditor() {
+                this.requestOffline = true;
+                try { this.openEditor(); } finally { this.requestOffline = false; }
+                if (this.offlineNew) document.getElementById('editorModalTitle').textContent = '新增離線日記';
+            }
+
+            async refreshOffline() {
+                try {
+                    const entries = await this.offlineStore('all');
+                    for (const url of this.offlinePreviewUrls || []) URL.revokeObjectURL(url);
+                    this.offlinePreviewUrls = [];
+                    const pending = entries.filter(e => e.status !== 'synced').length;
+                    document.getElementById('offlineStatus').textContent = (navigator.onLine ? '已連網' : '離線') + `・${pending} 篇待同步` + (this.offlineSyncing ? '・同步中' : '') + (this.offlineShellReady ? '・離線網站已就緒' : '・離線網站尚未就緒');
+                    document.getElementById('offlineEntries').innerHTML = entries.sort((a,b) => b.created - a.created).map(e => {
+                        const photos = Object.entries(e.images).map(([name, blob]) => {
+                            const url = URL.createObjectURL(blob); this.offlinePreviewUrls.push(url);
+                            return `<img src="${url}" alt="${escapeHtml(name)}" class="max-h-48 rounded-lg my-2">`;
+                        }).join('');
+                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${e.status === 'synced' ? '已同步' : '待同步'}${e.error ? '（同步未完成）' : ''}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
+                    }).join('');
+                } catch (error) { document.getElementById('offlineStatus').textContent = '無法存取本機儲存空間，請勿離線寫作'; }
+            }
+
+            async removeOfflineCopy(id) {
+                const entries = await this.offlineStore('all');
+                if (!entries.find(e => e.id === id && e.status === 'synced')) return;
+                if (!confirm('雲端已同步，移除此裝置的副本？')) return;
+                await this.offlineStore('delete', id); await this.refreshOffline();
+            }
+
+            async saveOffline() {
+                if (this.offlineSaving) return;
+                const value = id => document.getElementById(id).value;
+                const title = value('postTitle').trim(), date = value('postDate'), content = value('postContent').trim();
+                if (!title || !content || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return this.showToast('請填寫標題、日期及內文', 'error');
+                const config = this.getDriveConfig();
+                if (!config.folderId) { this.showToast('請先在設定儲存 Google Drive 筆記資料夾；內文仍保留', 'error'); return; }
+                this.offlineSaving = true;
+                try {
+                    const referenced = new Set(this.imagePaths(content));
+                    const images = Object.fromEntries(Object.entries(this.stagedImages).filter(([name]) => referenced.has(name)));
+                    const entry = {id: crypto.randomUUID(), rootId: config.folderId, clientId: config.clientId, title, date, content, mood: value('postMood'), category: value('postCategory'), images, created: Date.now(), status: 'pending'};
+                    await this.offlineStore('put', entry);
+                    navigator.storage?.persist?.().catch(() => {});
+                    this.closeEditor(); await this.refreshOffline();
+                    this.showToast('已儲存於此裝置，待同步'); this.syncOffline();
+                } catch (error) { this.showToast('本機儲存失敗，內文仍保留：' + error.message, 'error'); }
+                finally { this.offlineSaving = false; }
+            }
+
+            async ensureOfflineFile(id, name, parent, mimeType) {
+                try {
+                    const file = await this.driveRequest('files/' + id + '?fields=id,trashed,parents&supportsAllDrives=true');
+                    if (file.trashed || !file.parents?.includes(parent)) throw new Error('同步檔案已移動或刪除，請先檢查雲端');
+                    return file;
+                } catch (error) {
+                    if (error.status !== 404) throw error;
+                    try { return await this.driveRequest('files?fields=id&supportsAllDrives=true', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, name, parents:[parent], mimeType})}); }
+                    catch (createError) { if (createError.status === 409) return this.ensureOfflineFile(id, name, parent, mimeType); throw createError; }
+                }
+            }
+
+            async syncOffline() {
+                if (this.offlineSyncing || this.driveBusy || !navigator.onLine || this.sourceMode !== 'drive' || this.readOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
+                const perform = async () => {
+                    if (this.offlineSyncing || this.driveBusy) return;
+                    this.offlineSyncing = true; this.driveBusy = true;
+                    let changed = false;
+                    try {
+                        const config = this.getDriveConfig();
+                        const entries = await this.offlineStore('all');
+                        for (const entry of entries) {
+                            if (entry.status === 'synced' || entry.rootId !== this.driveRoot.id || entry.clientId !== config.clientId) continue;
+                            try {
+                                if (!entry.ids) {
+                                    const result = await this.driveRequest('files/generateIds?count=' + (Object.keys(entry.images).length + 2) + '&space=drive&type=files');
+                                    entry.ids = {folder: result.ids[0], note: result.ids[1], images: Object.fromEntries(Object.keys(entry.images).map((name,i) => [name,result.ids[i+2]]))};
+                                    await this.offlineStore('put', entry);
+                                }
+                                const year = await this.driveFolder(entry.rootId, entry.date.slice(0,4));
+                                const name = entry.date + '-' + entry.title.replace(/[\/\\?%*:|"<>]/g, '') + '-offline-' + entry.id.slice(0,8);
+                                await this.ensureOfflineFile(entry.ids.folder, name, year.id, 'application/vnd.google-apps.folder');
+                                for (const [imageName, blob] of Object.entries(entry.images)) {
+                                    await this.ensureOfflineFile(entry.ids.images[imageName], imageName, entry.ids.folder, blob.type || 'application/octet-stream');
+                                    await this.driveUpload(entry.ids.folder, imageName, blob, entry.ids.images[imageName]);
+                                }
+                                const mood = this.getMoodObj(entry.mood), category = this.getCategoryObj(entry.category);
+                                const markdown = `# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${mood.emoji} ${mood.name}\n- 心情ID：${entry.mood}\n- 分類：${category.name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
+                                await this.ensureOfflineFile(entry.ids.note, 'note.md', entry.ids.folder, 'text/markdown');
+                                await this.driveUpload(entry.ids.folder, 'note.md', new Blob([markdown], {type:'text/markdown'}), entry.ids.note);
+                                entry.status = 'synced'; entry.error = ''; await this.offlineStore('put', entry); changed = true;
+                            } catch (error) { entry.error = error.message; await this.offlineStore('put', entry); break; }
+                        }
+                        if (changed) { await this.reloadDrivePosts(); this.showToast('離線日記已同步至 Google Drive'); }
+                    } catch (error) { this.showToast('同步未完成，本機副本仍保留：' + error.message, 'error'); }
+                    finally { this.offlineSyncing = false; this.driveBusy = false; await this.refreshOffline(); }
+                };
+                if (navigator.locks) return navigator.locks.request('shiguang-offline-sync', {ifAvailable:true}, lock => lock ? perform() : undefined);
+                return perform();
             }
 
             getDriveConfig() {
@@ -1197,6 +1429,7 @@
                     this.showToast(`已連接 Google Drive，載入 ${posts.length} 篇日記`);
                 } catch (error) { this.showToast(error.message, 'error'); }
                 finally { this.driveBusy = false; }
+                if (this.sourceMode === 'drive') this.syncOffline();
             }
 
             async driveRequest(path, options = {}, format = 'json', upload = false) {
@@ -1207,7 +1440,8 @@
                 if (!response.ok) {
                     if (response.status === 401) this.driveExpires = 0;
                     const detail = await response.json().catch(() => ({}));
-                    throw new Error(response.status === 401 ? 'Google 授權已過期，請重新登入' : 'Google Drive 操作失敗：' + (detail.error?.message || response.status));
+                    const error = new Error(response.status === 401 ? 'Google 授權已過期，請重新登入' : 'Google Drive 操作失敗：' + (detail.error?.message || response.status));
+                    error.status = response.status; throw error;
                 }
                 return format === 'text' ? response.text() : format === 'blob' ? response.blob() : response.json();
             }
@@ -1253,13 +1487,13 @@
                                 if ([...referenced].some(path => path.startsWith(subpath))) await images(await this.driveChildren(file.id), subpath);
                             }
                             else if (referenced.has(prefix + file.name) && /\.(jpe?g|png|webp|gif|avif|bmp|svg)$/i.test(file.name)) {
-                                const blob = await this.driveRequest('files/' + file.id + '?alt=media&supportsAllDrives=true', {}, 'blob');
-                                post.imagesMap[prefix + file.name] = URL.createObjectURL(blob);
                                 post.driveImages[prefix + file.name] = file.id;
                             }
                         }
                     };
-                    await images(entries); post.coverImage = this.postCover(post);
+                    await images(entries);
+                    post.driveCoverPath = [...referenced].find(path => post.driveImages[path]) || null;
+                    post.coverImage = this.postCover(post);
                 };
                 const started = performance.now();
                 try {
