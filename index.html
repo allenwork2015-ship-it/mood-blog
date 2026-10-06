@@ -152,8 +152,10 @@
             <button onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
             <button onclick="app.importLocalToDrive()" class="px-4 py-3 rounded-full border text-sm">將本機日記加入雲端待傳</button>
             <button onclick="app.syncOffline(true)" class="px-4 py-3 rounded-full border text-sm">同步待傳日記</button>
+            <button onclick="app.exportOfflineBackup()" class="border rounded-full px-3 py-2 text-xs">匯出待傳備份</button><button onclick="document.getElementById('offlineBackupInput').click()" class="border rounded-full px-3 py-2 text-xs">還原備份</button><input id="offlineBackupInput" type="file" accept=".json,application/json" hidden onchange="app.importOfflineBackup(event)">
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
         </div>
+<div class="mt-2 flex flex-wrap gap-2 items-center"><span id="connectionStatus" class="text-xs"></span><button onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button></div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
     <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -242,14 +244,14 @@
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">3．離線與同步</h4>
                     <p>先連網設定雲端資料夾，等顯示「離線網站已就緒」。沒網路時按「新增離線日記」，文字與照片會先存於此裝置；待同步清單可展開查看。</p>
-                    <p>網頁開著、恢復網路且授權有效時會自動同步，也可按「同步待傳日記」。授權過期請重新登入；關閉網頁或鎖定手機後，不保證背景同步。</p>
-                    <p><strong>匯入本機日記：</strong>設定雲端資料夾 → 選取本機資料夾 →「將本機日記加入雲端待傳」→ 登入 Google Drive。這是單向複製，本機原檔保留，後續修改不會自動覆寫雲端。</p>
-                    <p>已同步副本預設收合，確認雲端內容後可移除本機副本。待傳日記綁定原設定資料夾；第一階段不支援離線修改或刪除既有雲端日記。</p>
+                    <p>新增日記按儲存後，會先保存於此裝置並立即出現在列表；不必等雲端上傳。網頁開著、恢復網路且授權有效時會在背景同步，上傳期間仍可閱讀及新增日記，也可按「同步待傳日記」。列表與待傳清單顯示待同步、同步中、已同步或重試；既有雲端日記的修改也會先存裝置，再背景上傳；上傳前會檢查雲端版本。若有衝突，保留本機修改並暫停該篇上傳，可另存副本，原雲端文章保留。可展開「比較版本」檢視雲端與本機文字。版本檢查尚非跨裝置鎖定，請避免同時修改同一篇。修改日記的備份還原採新增副本，不直接覆寫雲端；若原照片未下載且無網路，須連網後才能匯出完整照片備份。授權過期請重新登入；關閉網頁或鎖定手機後，不保證背景同步。</p>
+                    <p><strong>匯入本機日記：</strong>設定雲端資料夾 → 選取本機資料夾 →「將本機日記加入雲端待傳」→ 登入 Google Drive。本機與雲端可同時連線，透過「查看本機／查看雲端」切換列表。設定雲端資料夾後，本機新增日記儲存即自動加入待傳；登入授權有效時背景上傳。手動匯入用於搬移既有日記。手動匯入仍是單向複製。兩邊皆連接後，可按「同步本機與雲端」比對並更新文字與照片；雙邊修改時保留兩邊，不自動覆寫。同步刪除逐篇詢問，取消不刪除。本機更新與刪除前會備份到 .shiguang-backups；照片可位於文章子資料夾（例如 images/photo.jpg），同步會保留相對路徑。對應紀錄存於 .shiguang-sync.json，請勿移除。待傳清單須先同步完成，再執行雙向同步。</p>
+                    <p>已同步副本預設收合，確認雲端內容後可移除本機副本。待傳日記綁定原設定資料夾；已載入的雲端日記可先保存修改；未載入的雲端文章仍需連網取得。雲端文章刪除仍需連線。</p>
                 </section>
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">4．資料保存</h4>
                     <p>待傳日記存於此裝置，正常重新整理或關閉後再開啟仍會保留。單獨刪除 Cookie 不會直接刪除日記，但「Cookie 與其他網站資料」等清除選項可能一併刪除日記、照片與設定。</p>
-                    <p><strong>清除網站資料前，請先確認全部日記已同步。</strong>避免使用無痕模式；換裝置或瀏覽器不會帶入本機副本。目前沒有待傳日記匯出備份功能，本機保存不等同雲端備份。</p>
+                    <p><strong>清除網站資料前，請先確認全部日記已同步。</strong>避免使用無痕模式；換裝置或瀏覽器不會帶入本機副本。可按「匯出待傳備份」保存包含文字與照片的 JSON 檔，再用「還原備份」匯入；還原不會覆寫同 ID 日記。備份含私人日記內容，請妥善保存。本機保存不等同雲端備份。未開始上傳的日記可在待傳清單按「編輯待傳日記」；本機原檔不會跟著修改，已開始上傳的項目須同步完成後再編輯雲端文章。</p>
                 </section>
                 <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
                     <summary class="cursor-pointer font-semibold">進階設定</summary>
@@ -437,6 +439,7 @@
                 this.driveExpires = 0;
                 this.driveRoot = null;
                 this.driveBusy = false;
+                this.localPosts = []; this.drivePosts = []; this.driveReadOnly = true;
                 this.readOnly = typeof window.showDirectoryPicker !== 'function';
                 this.posts = [];
                 this.currentPage = 1;
@@ -480,7 +483,19 @@
                 }
             }
 
+            showSource(mode) {
+                if (this.driveBusy && !this.offlineSyncing) return;
+                if (mode === 'local' && !this.rootDirHandle) return this.showToast('請先選擇本機資料夾', 'error');
+                if (mode === 'drive' && !this.driveRoot) return this.showToast('請先登入 Google Drive', 'error');
+                this.closeEditor(); this.closeViewModal();
+                this.sourceMode = mode; this.posts = mode === 'local' ? this.localPosts : this.drivePosts;
+                this.readOnly = mode === 'local' ? false : this.driveReadOnly;
+                document.getElementById('dirLabel').textContent = mode === 'local' ? this.rootDirHandle.name : this.driveRoot.name + '（雲端）';
+                this.currentPage = 1; this.checkPlatform(); this.renderPosts(); this.updateStats();
+            }
+
             checkPlatform() {
+                document.getElementById('connectionStatus').textContent = `本機：${this.rootDirHandle?.name || '未連接'}・Google Drive：${this.driveRoot ? (Date.now() < this.driveExpires ? '已連接' : '授權到期') : '未連接'}`;
                 if (this.sourceMode === 'drive') {
                     document.getElementById('deviceModeHint').textContent = this.readOnly ? 'Google Drive 唯讀（資料夾權限不足）' : 'Google Drive 雲端讀寫模式';
                 }
@@ -607,6 +622,7 @@
             }
 
             async restoreConnections() {
+                await this.restoreDirectory();
                 const config = this.getDriveConfig();
                 let session;
                 try { session = JSON.parse(sessionStorage.getItem('shiguang_drive_session') || 'null'); } catch (error) {}
@@ -615,7 +631,6 @@
                     return;
                 }
                 this.clearDriveSession();
-                await this.restoreDirectory();
             }
 
             async restoreDirectory() {
@@ -657,6 +672,7 @@
 
             async activateDirectory(handle) {
                 this.rootDirHandle = handle;
+                this.posts = this.localPosts;
                 this.sourceMode = 'local';
                 this.readOnly = false;
                 this.closeEditor();
@@ -682,7 +698,6 @@
                 }
 
                 try {
-                    this.clearDriveSession();
                     const handle = await window.showDirectoryPicker({mode: 'readwrite'});
                     await this.activateDirectory(handle);
                     this.savedDirectory = handle;
@@ -717,6 +732,7 @@
                 }
 
                 this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                this.localPosts = this.posts;
                 this.renderPosts();
                 this.updateStats();
             }
@@ -733,15 +749,13 @@
                     postData.subDirHandle = subDir;
 
                     postData.imagesMap = {};
-                    for await (const [imgName, imgEntry] of subDir.entries()) {
-                        if (imgEntry.kind === 'file') {
-                            const lower = imgName.toLowerCase();
-                            if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp')) {
-                                const imgFile = await imgEntry.getFile();
-                                postData.imagesMap[imgName] = URL.createObjectURL(imgFile);
-                            }
+                    const readImages = async (dir, prefix = '') => {
+                        for await (const [name, entry] of dir.entries()) {
+                            if (entry.kind === 'directory') await readImages(entry, prefix + name + '/');
+                            else if (/\.(jpe?g|png|webp|gif|avif|bmp|svg)$/i.test(name)) postData.imagesMap[prefix + name] = URL.createObjectURL(await entry.getFile());
                         }
-                    }
+                    };
+                    await readImages(subDir);
 
                     postData.coverImage = this.postCover(postData);
 
@@ -879,7 +893,7 @@
             }
 
             updateStats() {
-                document.getElementById('totalCount').textContent = this.posts.length;
+                document.getElementById('totalCount').textContent = this.displayPosts().length;
             }
 
             getMoodObj(moodId) {
@@ -945,11 +959,24 @@
                 while (this.coverWorkers < 4 && this.coverQueue.length) drain();
             }
 
+            syncLabel(entry) {
+                return entry.conflict ? '版本衝突' : entry.status === 'synced' ? '已同步' : this.syncingEntryId === entry.id ? '同步中' : entry.error ? '重試' : '待同步';
+            }
+
+            displayPosts() {
+                if (this.sourceMode === 'local' && this.rootDirHandle) return this.posts;
+                const config = this.getDriveConfig();
+                const root = this.sourceMode === 'drive' ? this.driveRoot?.id : config.folderId;
+                const locals = [...(this.localQueuePosts?.values() || [])].filter(post => post.localEntry.rootId === root && post.localEntry.clientId === config.clientId && !this.posts.some(remote => remote.id === (post.localEntry.target && post.localEntry.status === 'synced' ? post.localEntry.target.folderId : post.localEntry.ids?.folder)));
+                const edited = new Set(locals.filter(p=>p.localEntry.status!=='synced').map(p=>p.localEntry.target?.folderId).filter(Boolean));
+                return [...this.posts.filter(p=>!edited.has(p.id)), ...locals];
+            }
+
             renderPosts() {
                 const container = document.getElementById('postsContainer');
                 const emptyState = document.getElementById('emptyState');
 
-                let filtered = this.posts.filter(p => {
+                let filtered = this.displayPosts().filter(p => {
                     const matchMood = this.currentFilter === 'all' || p.mood === this.currentFilter;
                     const matchSearch = !this.searchQuery || p.title.toLowerCase().includes(this.searchQuery) || p.content.toLowerCase().includes(this.searchQuery);
                     return matchMood && matchSearch;
@@ -988,7 +1015,7 @@
                                         </span>
                                         <time class="text-xs text-warm-400 dark:text-stone-500 font-sans">${post.date}</time>
                                     </div>
-                                    <h4 class="serif-title text-lg sm:text-xl font-bold text-warm-900 dark:text-stone-100 group-hover:text-warm-700 transition-colors mb-2 line-clamp-1">${escapeHtml(post.title)}</h4>
+                                    <h4 class="serif-title text-lg sm:text-xl font-bold text-warm-900 dark:text-stone-100 group-hover:text-warm-700 transition-colors mb-2 line-clamp-1">${escapeHtml(post.title)}</h4>${post.localEntry ? `<p class="text-xs text-warm-500 mb-2">已存於此裝置・${this.syncLabel(post.localEntry)}</p>` : ''}
                                     <p class="text-xs sm:text-sm text-warm-600 dark:text-stone-300 line-clamp-3 leading-relaxed mb-4">${escapeHtml(excerpt)}</p>
                                 </div>
                                 <div class="pt-4 border-t border-warm-100 dark:border-darkBorder flex items-center justify-between text-xs text-warm-400 dark:text-stone-500">
@@ -1011,7 +1038,7 @@
                                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${mood.color}"><span>${mood.emoji}</span><span>${mood.name}</span></span>
                                         <span>${post.date}</span>
                                     </div>
-                                    <h4 class="serif-title text-base sm:text-xl font-bold text-warm-900 dark:text-stone-100 group-hover:text-warm-700 transition-colors">${escapeHtml(post.title)}</h4>
+                                    <h4 class="serif-title text-base sm:text-xl font-bold text-warm-900 dark:text-stone-100 group-hover:text-warm-700 transition-colors">${escapeHtml(post.title)}</h4>${post.localEntry ? `<p class="text-xs text-warm-500 mb-2">已存於此裝置・${this.syncLabel(post.localEntry)}</p>` : ''}
                                     <p class="text-xs sm:text-sm text-warm-600 dark:text-stone-300 line-clamp-2 leading-relaxed">${escapeHtml(excerpt)}</p>
                                 </div>
                                 ${post.coverImage ? `<img src="${post.coverImage}" class="w-full sm:w-28 sm:h-28 object-cover rounded-2xl border border-warm-200 dark:border-darkBorder shrink-0">` : ''}
@@ -1024,7 +1051,8 @@
             }
 
             openEditor(postId = null) {
-                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
+                if (this.driveBusy && !(this.offlineSyncing && (!postId || this.requestOffline || this.sourceMode === 'drive'))) return this.showToast('雲端操作進行中，請稍候', 'error');
+                this.offlineEditingId = null;
                 this.driveDraft = null;
                 this.driveEditVersion = null;
                 this.offlineNew = !!this.requestOffline || (!postId && this.sourceMode === 'drive');
@@ -1067,11 +1095,12 @@
             }
 
             closeEditor() {
+                this.offlineEditingId = null;
                 document.getElementById('editorModal').classList.add('hidden');
             }
 
             insertImageToContent(event) {
-                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
+                if (this.driveBusy && !this.offlineSyncing && !this.offlineNew) return this.showToast('雲端操作進行中，請稍候', 'error');
                 const file = event.target.files[0];
                 if (!file) return;
 
@@ -1100,12 +1129,15 @@
             async savePost() {
                 if (this.offlineNew && !document.getElementById('editPostId').value) return this.saveOffline();
                 if (!this.allowWrite()) return;
-                if (this.sourceMode === 'drive') return this.saveDrivePost();
+                if (this.sourceMode === 'drive') return this.queueDriveEdit();
                 if (!this.rootDirHandle) {
                     this.showToast('尚未連結資料夾', 'error');
                     return;
                 }
 
+                const isNewLocal = !document.getElementById('editPostId').value;
+                const localQueueConfig = {...this.getDriveConfig()};
+                const localImages = {...this.stagedImages};
                 const oldFolder = document.getElementById('editOldFolder').value;
                 const oldYearFolder = document.getElementById('editOldYearFolder').value;
                 const title = document.getElementById('postTitle').value.trim();
@@ -1156,7 +1188,14 @@
                     await writableMd.write(mdContent);
                     await writableMd.close();
 
-                    this.showToast('已成功儲存日記！');
+                    if (isNewLocal && localQueueConfig.folderId) {
+                        try {
+                            const entry = {id:crypto.randomUUID(), rootId:localQueueConfig.folderId, clientId:localQueueConfig.clientId, title, date, content, mood:moodId, category:categoryId, images:Object.fromEntries(Object.entries(localImages).filter(([name]) => this.imagePaths(content).includes(name))), created:Date.now(), status:'pending'};
+                            await this.offlineStore('put', entry); await this.refreshOffline();
+                            this.showToast('已儲存本機並加入雲端待傳');
+                            this.syncOffline();
+                        } catch (error) { this.showToast('本機已儲存，但加入待傳失敗；請使用手動匯入：' + error.message, 'error'); }
+                    } else this.showToast(isNewLocal ? '已儲存本機；設定雲端資料夾後才能自動待傳' : '已成功儲存日記！');
                     this.closeEditor();
                     await this.loadPostsFromFolder();
                 } catch (err) {
@@ -1182,7 +1221,7 @@
             }
 
             openViewModal(postId) {
-                const post = this.posts.find(p => p.id === postId);
+                const post = this.displayPosts().find(p => p.id === postId);
                 if (!post) return;
 
                 this.viewPostId = postId;
@@ -1211,6 +1250,7 @@
                     this.deletePost(post.id);
                 };
 
+                for (const id of ['viewEditBtn', 'viewDeleteBtn']) { document.getElementById(id).style.display = post.localEntry || this.readOnly ? 'none' : ''; }
                 document.getElementById('viewModal').classList.remove('hidden');
                 if (Object.keys(post.driveImages || {}).some(path => !post.imagesMap[path])) {
                     this.loadViewImages(post).then(() => {
@@ -1223,6 +1263,7 @@
 
             closeViewModal() {
                 this.viewPostId = null;
+                this.releasePostImages(this.retiredViewPosts || []); this.retiredViewPosts = [];
                 document.getElementById('viewModal').classList.add('hidden');
             }
 
@@ -1271,9 +1312,87 @@
                 if (this.offlineNew) document.getElementById('editorModalTitle').textContent = '新增離線日記';
             }
 
+            async editOfflineEntry(id) {
+                const entry = (await this.offlineStore('all')).find(e => e.id === id);
+                if (!entry || entry.status === 'synced' || entry.ids || entry.target || this.offlineSyncing) return this.showToast('已開始上傳的日記暫不可修改；請待同步後編輯雲端文章', 'error');
+                this.openOfflineEditor();
+                if (document.getElementById('editorModal').classList.contains('hidden')) return;
+                this.offlineEditingId = id;
+                document.getElementById('editorModalTitle').textContent = '編輯待同步日記';
+                for (const [field, key] of Object.entries({postTitle:'title',postDate:'date',postContent:'content',postMood:'mood',postCategory:'category'})) document.getElementById(field).value = entry[key];
+                this.stagedImages = {...entry.images};
+            }
+
+            async exportOfflineBackup() {
+                try {
+                    const entries = (await this.offlineStore('all')).filter(e => e.status !== 'synced');
+                    if (!entries.length) return this.showToast('沒有待同步日記需要備份');
+                    const encoded = [];
+                    for (const entry of entries) {
+                        const images = {};
+                        for (const [name, blob] of Object.entries(entry.images)) {
+                            const data = await new Promise((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=()=>reject(reader.error); reader.readAsDataURL(blob); });
+                            images[name] = {type:blob.type, data:data.split(',')[1]};
+                        }
+                        for(const [name,id] of Object.entries(entry.remoteImages||{})) {
+                            if(images[name])continue;
+                            const blob=entry.cacheImages?.[name] || await this.driveRequest('files/'+id+'?alt=media&supportsAllDrives=true',{},'blob');
+                            const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});
+                            images[name]={type:blob.type,data:data.split(',')[1]};
+                        }
+                        const copy={...entry, images};
+                        if(copy.target){copy.title+='（修改備份副本）';delete copy.target;delete copy.ids;delete copy.published;delete copy.editImageIds;}
+                        delete copy.cacheImages;delete copy.remoteImages;delete copy.originalTarget;
+                        encoded.push(copy);
+                    }
+                    const url = URL.createObjectURL(new Blob([JSON.stringify({format:'shiguang-offline-backup',version:1,entries:encoded})], {type:'application/json'}));
+                    const link = document.createElement('a'); link.href=url; link.download='拾光手札待傳備份-'+new Date().toISOString().slice(0,10)+'.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),60000);
+                    this.showToast('備份已產生，請確認下載檔案已保存');
+                } catch (error) { this.showToast('備份失敗：'+error.message, 'error'); }
+            }
+
+            async importOfflineBackup(event) {
+                const file=event.target.files?.[0]; if(!file)return;
+                try {
+                    const backup=JSON.parse(await file.text());
+                    if(backup.format!=='shiguang-offline-backup'||backup.version!==1||!Array.isArray(backup.entries))throw new Error('不是支援的備份格式');
+                    const existing = await this.offlineStore('all'); const decoded=[];
+                    for(const raw of backup.entries){
+                        if(!/^[a-zA-Z0-9-]+$/.test(raw.id)||typeof raw.title!=='string'||typeof raw.content!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)||typeof raw.rootId!=='string'||typeof raw.clientId!=='string'||!raw.images||typeof raw.images!=='object')throw new Error('備份內容不完整');
+                        if(raw.ids && (!/^[\w-]+$/.test(raw.ids.folder)||!/^[\w-]+$/.test(raw.ids.note)||!raw.ids.images||Object.values(raw.ids.images).some(id=>typeof id!=='string'||!/^[\w-]+$/.test(id))))throw new Error('備份同步識別碼不完整');
+                        const images={};
+                        for(const [name,image] of Object.entries(raw.images)) {const bytes=Uint8Array.from(atob(image.data),c=>c.charCodeAt(0));images[name]=new Blob([bytes],{type:image.type||'application/octet-stream'});}
+                        decoded.push({id:raw.id,title:raw.title,content:raw.content,date:raw.date,mood:raw.mood,category:raw.category,rootId:raw.rootId,clientId:raw.clientId,created:Number(raw.created)||Date.now(),status:'pending',images,ids:raw.ids,importKey:raw.importKey});
+                    }
+                    let added=0;
+                    for(const entry of decoded){if(existing.some(e=>e.id===entry.id))continue;await this.offlineStore('put',entry);existing.push(entry);added++;}
+                    await this.refreshOffline();this.showToast(`已還原 ${added} 篇；同 ID 日記不會覆寫，請確認原雲端設定後同步`);
+                }catch(error){this.showToast('還原失敗：'+error.message,'error');}finally{event.target.value='';}
+            }
+
             async refreshOffline() {
                 try {
                     const entries = await this.offlineStore('all');
+                    this.localQueuePosts ||= new Map();
+                    for (const entry of entries) {
+                        const id = 'offline-' + entry.id;
+                        let post = this.localQueuePosts.get(id);
+                        if (post && JSON.stringify([post.title,post.content,post.date,post.mood,post.category]) !== JSON.stringify([entry.title,entry.content,entry.date,entry.mood,entry.category])) {
+                            if (this.viewPostId === id) { this.retiredViewPosts ||= []; this.retiredViewPosts.push(post); }
+                            else this.releasePostImages([post]);
+                            post = null;
+                        }
+                        if (!post) {
+                            const imagesMap = Object.fromEntries(Object.entries({...entry.cacheImages,...entry.images}).map(([name, blob]) => [name, URL.createObjectURL(blob)]));
+                            post = {id, title:entry.title, date:entry.date, mood:entry.mood, category:entry.category, content:entry.content, cleanExcerpt:entry.content.replace(/!\[.*?\]\(.*?\)/g, '').trim(), imagesMap};
+                            post.coverImage = this.postCover(post);
+                            this.localQueuePosts.set(id, post);
+                        }
+                        post.localEntry = entry;
+                    }
+                    for (const [id, post] of this.localQueuePosts) {
+                        if (!entries.some(e => 'offline-' + e.id === id) && this.viewPostId !== id) { this.releasePostImages([post]); this.localQueuePosts.delete(id); }
+                    }
                     for (const url of this.offlinePreviewUrls || []) URL.revokeObjectURL(url);
                     this.offlinePreviewUrls = [];
                     const pending = entries.filter(e => e.status !== 'synced').length;
@@ -1283,13 +1402,14 @@
                             const url = URL.createObjectURL(blob); this.offlinePreviewUrls.push(url);
                             return `<img src="${url}" alt="${escapeHtml(name)}" class="max-h-48 rounded-lg my-2">`;
                         }).join('');
-                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${e.status === 'synced' ? '已同步' : '待同步'}${e.error ? '（同步未完成）' : ''}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
+                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${e.status !== 'synced' && !e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${e.status !== 'synced' && e.error ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
                     };
                     entries.sort((a,b) => b.created - a.created);
                     const waiting = entries.filter(e => e.status !== 'synced');
                     const synced = entries.filter(e => e.status === 'synced');
                     const wasOpen = document.getElementById('syncedOfflineCopies')?.open || false;
                     document.getElementById('offlineEntries').innerHTML = waiting.map(renderEntry).join('') + (synced.length ? `<details id="syncedOfflineCopies" class="p-3 border rounded-xl" ${wasOpen ? 'open' : ''}><summary class="cursor-pointer">已同步副本（${synced.length} 篇）</summary><p class="text-xs mt-2">這些副本已同步至雲端；收合不會刪除資料，仍占用此裝置儲存空間。</p><div class="mt-2 space-y-2">${synced.map(renderEntry).join('')}</div></details>` : '');
+                    this.renderPosts(); this.updateStats();
                 } catch (error) { document.getElementById('offlineStatus').textContent = '無法存取本機儲存空間，請勿離線寫作'; }
             }
 
@@ -1328,6 +1448,11 @@
             }
 
             async saveOffline() {
+                if (this.offlineEditingId && navigator.locks) return navigator.locks.request('shiguang-offline-sync', {ifAvailable:true}, lock => lock ? this.saveOfflineData() : this.showToast('其他分頁正在同步，請稍後再儲存修改', 'error'));
+                return this.saveOfflineData();
+            }
+
+            async saveOfflineData() {
                 if (this.offlineSaving) return;
                 const value = id => document.getElementById(id).value;
                 const title = value('postTitle').trim(), date = value('postDate'), content = value('postContent').trim();
@@ -1338,7 +1463,9 @@
                 try {
                     const referenced = new Set(this.imagePaths(content));
                     const images = Object.fromEntries(Object.entries(this.stagedImages).filter(([name]) => referenced.has(name)));
-                    const entry = {id: crypto.randomUUID(), rootId: config.folderId, clientId: config.clientId, title, date, content, mood: value('postMood'), category: value('postCategory'), images, created: Date.now(), status: 'pending'};
+                    const previous = this.offlineEditingId ? (await this.offlineStore('all')).find(e => e.id === this.offlineEditingId) : null;
+                    if (this.offlineEditingId && (!previous || previous.ids || previous.status === 'synced')) throw new Error('日記已開始同步，請保留修改內容後重新查看');
+                    const entry = {...(previous || {}), id: previous?.id || crypto.randomUUID(), rootId: previous?.rootId || config.folderId, clientId: previous?.clientId || config.clientId, title, date, content, mood: value('postMood'), category: value('postCategory'), images, created: previous?.created || Date.now(), status: 'pending', error:''};
                     await this.offlineStore('put', entry);
                     navigator.storage?.persist?.().catch(() => {});
                     this.closeEditor(); await this.refreshOffline();
@@ -1362,13 +1489,13 @@
             async syncOffline(manual = false) {
                 if (manual) {
                     if (!navigator.onLine) return this.showToast('目前離線，待傳日記仍保留', 'error');
-                    if (this.sourceMode !== 'drive' || !this.driveToken || Date.now() >= this.driveExpires) return this.showToast('請先按 Google Drive 登入，才能同步待傳日記', 'error');
-                    if (this.readOnly) return this.showToast('目前雲端資料夾沒有寫入權限', 'error');
+                    if (!this.driveRoot || !this.driveToken || Date.now() >= this.driveExpires) return this.showToast('請先按 Google Drive 登入，才能同步待傳日記', 'error');
+                    if (this.driveReadOnly) return this.showToast('目前雲端資料夾沒有寫入權限', 'error');
                     const pending = (await this.offlineStore('all')).filter(e => e.status !== 'synced');
                     if (!pending.length) return this.showToast('沒有待同步的離線日記');
                     if (!pending.some(e => e.rootId === this.driveRoot.id && e.clientId === this.getDriveConfig().clientId)) return this.showToast('待傳日記綁定其他資料夾，請切回原設定後同步', 'error');
                 }
-                if (this.offlineSyncing || this.driveBusy || !navigator.onLine || this.sourceMode !== 'drive' || this.readOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
+                if (this.offlineSyncing || this.driveBusy || !navigator.onLine || !this.driveRoot || this.driveReadOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
                 const perform = async () => {
                     if (this.offlineSyncing || this.driveBusy) return;
                     this.offlineSyncing = true; this.driveBusy = true;
@@ -1377,8 +1504,13 @@
                         const config = this.getDriveConfig();
                         const entries = await this.offlineStore('all');
                         for (const entry of entries) {
-                            if (entry.status === 'synced' || entry.rootId !== this.driveRoot.id || entry.clientId !== config.clientId) continue;
+                            if (entry.status === 'synced' || entry.conflict || entry.id === this.offlineEditingId || entry.rootId !== this.driveRoot.id || entry.clientId !== config.clientId) continue;
                             try {
+                                this.syncingEntryId = entry.id; entry.error = ''; await this.offlineStore('put', entry); await this.refreshOffline();
+                                if(entry.target){await this.applyQueuedEdit(entry);changed=true;continue;}
+                                for(const [name,id] of Object.entries(entry.remoteImages||{})){
+                                    if(!entry.images[name]){entry.images[name]=await this.driveRequest('files/'+id+'?alt=media&supportsAllDrives=true',{},'blob');await this.offlineStore('put',entry);}
+                                }
                                 if (!entry.ids) {
                                     const result = await this.driveRequest('files/generateIds?count=' + (Object.keys(entry.images).length + 2) + '&space=drive&type=files');
                                     entry.ids = {folder: result.ids[0], note: result.ids[1], images: Object.fromEntries(Object.keys(entry.images).map((name,i) => [name,result.ids[i+2]]))};
@@ -1388,8 +1520,9 @@
                                 const name = entry.date + '-' + entry.title.replace(/[\/\\?%*:|"<>]/g, '') + '-offline-' + entry.id.slice(0,8);
                                 await this.ensureOfflineFile(entry.ids.folder, name, year.id, 'application/vnd.google-apps.folder');
                                 for (const [imageName, blob] of Object.entries(entry.images)) {
-                                    await this.ensureOfflineFile(entry.ids.images[imageName], imageName, entry.ids.folder, blob.type || 'application/octet-stream');
-                                    await this.driveUpload(entry.ids.folder, imageName, blob, entry.ids.images[imageName]);
+                                    const location = await this.driveImageLocation(entry.ids.folder, imageName);
+                                    await this.ensureOfflineFile(entry.ids.images[imageName], location.name, location.parent, blob.type || 'application/octet-stream');
+                                    await this.driveUpload(location.parent, location.name, blob, entry.ids.images[imageName]);
                                 }
                                 const mood = this.getMoodObj(entry.mood), category = this.getCategoryObj(entry.category);
                                 const markdown = `# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${mood.emoji} ${mood.name}\n- 心情ID：${entry.mood}\n- 分類：${category.name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
@@ -1397,10 +1530,26 @@
                                 await this.driveUpload(entry.ids.folder, 'note.md', new Blob([markdown], {type:'text/markdown'}), entry.ids.note);
                                 entry.status = 'synced'; entry.error = ''; await this.offlineStore('put', entry); changed = true;
                             } catch (error) { entry.error = error.message; await this.offlineStore('put', entry); break; }
+                            finally { this.syncingEntryId = null; await this.refreshOffline(); }
                         }
-                        if (changed) { await this.reloadDrivePosts(); this.showToast('離線日記已同步至 Google Drive'); }
+                        if (changed) {
+                            // Refresh the list without closing a reader or an editor opened during upload.
+                            const posts = await this.fetchDrivePosts(this.driveRoot.id);
+                            const old = this.drivePosts;
+                            this.drivePosts = posts;
+                            if (this.sourceMode === 'drive') this.posts = posts;
+                            if (this.viewPostId && old.some(p => p.id === this.viewPostId)) {
+                                this.retiredViewPosts ||= []; this.retiredViewPosts.push(...old);
+                            } else this.releasePostImages(old);
+                            this.renderPosts(); this.updateStats();
+                            this.showToast('日記已同步至 Google Drive');
+                        }
                     } catch (error) { this.showToast('同步未完成，本機副本仍保留：' + error.message, 'error'); }
-                    finally { this.offlineSyncing = false; this.driveBusy = false; await this.refreshOffline(); }
+                    finally {
+                        this.offlineSyncing = false; this.driveBusy = false; this.syncingEntryId = null; await this.refreshOffline();
+                        const remaining = await this.offlineStore('all');
+                        if (remaining.some(e => e.status !== 'synced' && !e.conflict && e.id !== this.offlineEditingId && !e.error && e.rootId === this.driveRoot?.id && e.clientId === this.getDriveConfig().clientId)) setTimeout(() => this.syncOffline(), 500);
+                    }
                 };
                 if (navigator.locks) return navigator.locks.request('shiguang-offline-sync', {ifAvailable:true}, lock => lock ? perform() : undefined);
                 return perform();
@@ -1452,17 +1601,18 @@
                     // Commit the source only after the entire folder has loaded successfully.
                     const posts = await this.fetchDrivePosts(root.id);
                     if (this.sourceMode !== 'drive' || this.driveRoot?.id !== root.id) this.closeEditor();
-                    this.closeViewModal(); this.releasePostImages();
-                    this.posts = posts; this.rootDirHandle = null; this.driveRoot = root;
+                    this.closeViewModal(); this.releasePostImages(this.drivePosts);
+                    this.drivePosts = posts; this.driveRoot = root; this.driveReadOnly = !root.capabilities?.canAddChildren;
+                    this.posts = this.rootDirHandle ? this.localPosts : posts;
                     document.getElementById('resumeDirectoryBtn').style.display = 'none';
                     try { sessionStorage.setItem('shiguang_drive_session', JSON.stringify({token:this.driveToken, expires:this.driveExpires, clientId:config.clientId, folderId:config.folderId})); } catch (error) {}
-                    this.sourceMode = 'drive'; this.readOnly = !root.capabilities?.canAddChildren;
-                    document.getElementById('dirLabel').textContent = root.name + '（雲端）';
+                    this.sourceMode = this.rootDirHandle ? 'local' : 'drive'; this.readOnly = this.rootDirHandle ? false : this.driveReadOnly;
+                    document.getElementById('dirLabel').textContent = this.rootDirHandle ? this.rootDirHandle.name : root.name + '（雲端）';
                     this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings();
                     this.showToast(`已連接 Google Drive，載入 ${posts.length} 篇日記`);
                 } catch (error) { this.showToast(error.message, 'error'); }
                 finally { this.driveBusy = false; }
-                if (this.sourceMode === 'drive') this.syncOffline();
+                if (this.driveRoot) this.syncOffline();
             }
 
             async driveRequest(path, options = {}, format = 'json', upload = false) {
@@ -1556,7 +1706,7 @@
 
             async refreshDrive() {
                 if (this.driveBusy) return;
-                if (this.sourceMode !== 'drive') return this.showToast('請先連接 Google Drive', 'error');
+                if (!this.driveRoot) return this.showToast('請先連接 Google Drive', 'error');
                 this.driveBusy = true;
                 try { await this.reloadDrivePosts(); this.showToast('已重新讀取雲端日記'); }
                 catch (error) { this.showToast(error.message, 'error'); }
@@ -1565,7 +1715,8 @@
 
             async reloadDrivePosts() {
                 const posts = await this.fetchDrivePosts(this.driveRoot.id);
-                this.closeViewModal(); this.releasePostImages(); this.posts = posts;
+                this.releasePostImages(this.drivePosts); this.drivePosts = posts;
+                if (this.sourceMode === 'drive') { this.closeViewModal(); this.posts = posts; }
                 this.renderPosts(); this.updateStats();
             }
 
@@ -1573,14 +1724,14 @@
                 if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
                 this.clearDriveSession();
                 if (this.driveToken && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(this.driveToken, () => {});
-                this.driveToken = null; this.driveExpires = 0; this.driveRoot = null;
+                this.driveToken = null; this.driveExpires = 0; this.driveRoot = null; this.driveReadOnly = true; this.releasePostImages(this.drivePosts); this.drivePosts = [];
                 if (this.sourceMode === 'drive') {
                     this.closeEditor(); this.closeViewModal(); this.releasePostImages(); this.posts = [];
-                    this.sourceMode = 'local'; this.readOnly = typeof window.showDirectoryPicker !== 'function';
-                    document.getElementById('dirLabel').textContent = '選擇資料夾';
+                    this.sourceMode = 'local'; this.posts = this.localPosts; this.readOnly = this.rootDirHandle ? false : typeof window.showDirectoryPicker !== 'function';
+                    document.getElementById('dirLabel').textContent = this.rootDirHandle?.name || '選擇資料夾';
                     this.checkPlatform(); this.renderPosts(); this.updateStats();
                 }
-                this.showToast('已中斷 Google Drive 連接');
+                this.checkPlatform(); this.showToast('已中斷 Google Drive 連接');
             }
 
             async driveFolder(parent, name) {
@@ -1588,6 +1739,14 @@
                 if (matches.length > 1 || matches.some(file => file.mimeType !== 'application/vnd.google-apps.folder')) throw new Error('雲端存在同名項目，請先整理：' + name);
                 if (matches.length) return matches[0];
                 return this.driveRequest('files?fields=id,name,parents,capabilities&supportsAllDrives=true', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name, mimeType:'application/vnd.google-apps.folder', parents:[parent]})});
+            }
+
+            async driveImageLocation(root, relative) {
+                const parts = relative.split('/');
+                if (!parts.length || parts.some(part => !part || part === '.' || part === '..' || /[\\\0]/.test(part))) throw new Error('照片相對路徑無效：' + relative);
+                let parent = root;
+                for (const name of parts.slice(0, -1)) parent = (await this.driveFolder(parent, name)).id;
+                return {parent, name: parts[parts.length - 1]};
             }
 
             async driveUpload(parent, name, blob, existingId = null) {
@@ -1599,6 +1758,68 @@
                     '\r\n--' + boundary + '--\r\n'
                 ]);
                 return this.driveRequest('files' + (existingId ? '/' + existingId : '') + '?uploadType=multipart&fields=id,name,modifiedTime&supportsAllDrives=true', {method:existingId ? 'PATCH' : 'POST', headers:{'Content-Type':'multipart/related; boundary=' + boundary}, body}, 'json', true);
+            }
+
+            async queueDriveEdit() {
+                if (this.queueEditSaving) return;
+                const value=id=>document.getElementById(id).value;
+                const post=this.posts.find(p=>p.id===value('editPostId'));
+                if (!post?.driveNote) return this.showToast('文章資料已更新，請重新開啟編輯', 'error');
+                const title=value('postTitle').trim(), content=value('postContent').trim(), date=value('postDate');
+                if(!title||!content||!/^\d{4}-\d{2}-\d{2}$/.test(date))return this.showToast('請填寫標題、日期與內文','error');
+                this.queueEditSaving=true;
+                try {
+                    const entries=await this.offlineStore('all');
+                    if(entries.some(e=>e.target?.folderId===post.id&&e.status!=='synced'))throw new Error('這篇已有待傳修改，請先完成同步或處理衝突');
+                    const refs=new Set(this.imagePaths(content));
+                    const config=this.getDriveConfig();
+                    const images=Object.fromEntries(Object.entries(this.stagedImages).filter(([name])=>refs.has(name)));
+                    const remoteImages=Object.fromEntries(Object.entries(post.driveImages||{}).filter(([name])=>refs.has(name)));
+                    const cacheImages={};
+                    for(const name of Object.keys(remoteImages)){if(post.imagesMap[name])cacheImages[name]=await(await fetch(post.imagesMap[name])).blob();}
+                    const entry={id:crypto.randomUUID(), rootId:this.driveRoot.id, clientId:config.clientId,title,date,content,mood:value('postMood'),category:value('postCategory'),images,remoteImages,cacheImages,created:Date.now(),status:'pending',target:{folderId:post.id,noteId:post.driveNote.id,version:this.driveEditVersion,folder:post.driveFolder,originalContent:post.content,originalImages:post.driveImages||{}}};
+                    await this.offlineStore('put',entry);this.closeEditor();await this.refreshOffline();this.showToast('修改已存於此裝置，將在背景同步');this.syncOffline();
+                }catch(error){this.showToast(error.message,'error');}finally{this.queueEditSaving=false;}
+            }
+
+            async applyQueuedEdit(entry) {
+                const target=entry.target;
+                const markdown=`# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${this.getMoodObj(entry.mood).emoji} ${this.getMoodObj(entry.mood).name}\n- 心情ID：${entry.mood}\n- 分類：${this.getCategoryObj(entry.category).name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
+                const latest=await this.driveRequest('files/'+target.noteId+'?fields=modifiedTime,trashed&supportsAllDrives=true');
+                if(latest.trashed)throw new Error('雲端文章已刪除，修改副本仍保留');
+                let published=!!entry.published;
+                if(latest.modifiedTime!==target.version){
+                    const current=await this.driveRequest('files/'+target.noteId+'?alt=media&supportsAllDrives=true',{},'text');
+                    if(current===markdown){published=true;target.version=latest.modifiedTime;}
+                    else {entry.conflict=true;entry.remoteConflictContent=current;throw new Error('其他裝置已修改此文章；本機修改已保留，請另存副本或比較版本');}
+                }
+                if(!published){
+                    entry.editImageIds ||= {};
+                    const missing=Object.keys(entry.images).filter(name=>!entry.editImageIds[name]);
+                    if(missing.length){const result=await this.driveRequest('files/generateIds?count='+missing.length+'&space=drive&type=files');missing.forEach((name,i)=>entry.editImageIds[name]=result.ids[i]);await this.offlineStore('put',entry);}
+                    for(const [name,blob] of Object.entries(entry.images)){const location=await this.driveImageLocation(target.folderId,name);await this.ensureOfflineFile(entry.editImageIds[name],location.name,location.parent,blob.type||'application/octet-stream');await this.driveUpload(location.parent,location.name,blob,entry.editImageIds[name]);}
+                    const check=await this.driveRequest('files/'+target.noteId+'?fields=modifiedTime&supportsAllDrives=true');
+                    if(check.modifiedTime!==target.version){entry.conflict=true;entry.remoteConflictContent=await this.driveRequest('files/'+target.noteId+'?alt=media&supportsAllDrives=true',{},'text');throw new Error('上傳期間雲端版本改變；修改已保留，請處理衝突');}
+                    const note=await this.driveUpload(target.folderId,'note.md',new Blob([markdown],{type:'text/markdown'}),target.noteId);
+                    target.version=note.modifiedTime;entry.published=true;await this.offlineStore('put',entry);
+                }
+                const year=await this.driveFolder(entry.rootId,entry.date.slice(0,4));
+                const name=entry.date+'-'+entry.title.replace(/[\/\\?%*:|"<>]/g,'');
+                const query=new URLSearchParams({supportsAllDrives:'true'});
+                if(target.folder.parents?.[0]!==year.id){query.set('addParents',year.id);query.set('removeParents',(target.folder.parents||[]).join(','));}
+                await this.driveRequest('files/'+target.folderId+'?'+query,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+                // Remove only references deleted by this edit, after Markdown is confirmed published.
+                const refs=new Set(this.imagePaths(entry.content));
+                for(const path of new Set(this.imagePaths(target.originalContent))){if(!refs.has(path)&&target.originalImages[path])await this.driveRequest('files/'+target.originalImages[path]+'?supportsAllDrives=true',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});}
+                entry.status='synced';entry.error='';entry.conflict=false;await this.offlineStore('put',entry);
+            }
+
+            async keepConflictCopy(id) {
+                if(this.offlineSyncing)return this.showToast('請稍候同步結束','error');
+                const entry=(await this.offlineStore('all')).find(e=>e.id===id);
+                if(!entry?.conflict)return;
+                entry.title+='（本機修改副本）';entry.originalTarget=entry.target;delete entry.target;delete entry.ids;entry.error='';entry.conflict=false;
+                await this.offlineStore('put',entry);await this.refreshOffline();this.syncOffline();
             }
 
             async saveDrivePost() {
@@ -1724,6 +1945,9 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+    </script>
+    <script src="./folder-sync.js"></script>
+    <script>
         const app = new BlogJournalApp();
     </script>
 </body>
