@@ -111,6 +111,8 @@
         .dark #dirBtn, .dark #driveBtn { background: #292524; color: #a8a29e; }
         .dark #dirBtn[data-connected="true"], .dark #driveBtn[data-connected="true"] { background: #d6c9bc; color: #292524; }
         #dirLabel { white-space: normal; overflow-wrap: anywhere; }
+            #newOfflineDiaryBtn:disabled, #uploadDiaryBtn:disabled { background: #e7e5e4; color: #a8a29e; border-color: #e7e5e4; cursor: not-allowed; box-shadow: none; }
+        .dark #newOfflineDiaryBtn:disabled, .dark #uploadDiaryBtn:disabled { background: #292524; color: #78716c; border-color: #44403c; }
     </style>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
@@ -154,11 +156,11 @@
 
     <section class="max-w-5xl w-full mx-auto px-4 mt-4" aria-label="離線日記">
         <div class="flex flex-wrap gap-2 items-center">
-            <button onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
-            <button id="uploadDiaryBtn" onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
+            <button id="newOfflineDiaryBtn" onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
+            <button id="uploadDiaryBtn" disabled onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
+            <button onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
         </div>
-<div class="mt-2 flex flex-wrap gap-2 items-center"><button onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button></div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
     <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -251,7 +253,7 @@
                 </section>
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">4．閱讀與資料保存</h4>
-                    <p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。待傳日記未開始上傳前可編輯或刪除；已同步副本可移除此裝置副本，雲端仍保留。編輯已同步日記需連接原雲端資料夾。</p>
+                    <p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。待傳日記未開始上傳前可編輯或刪除；同步成功後清除暫存內容，設定內「操作日誌」保留最近 100 筆結果；必要的同步識別資料仍保留。編輯已同步日記需連接原雲端資料夾。</p>
                     <p><strong>離線不保證能閱讀全部雲端日記。</strong>本機檔案與已存於此裝置的內容可讀；未下載的雲端文章及照片仍需網路。關閉網頁或鎖定手機後，不保證背景上傳。</p>
                     <p>正常重新整理會保留待傳資料；清除網站資料、使用無痕模式或更換裝置可能無法保留。清除前請確認所有日記已同步。視窗可按 X 或 Esc 關閉，關閉不會自動儲存。</p>
                 </section>
@@ -369,6 +371,11 @@
             </div>
 
             <div class="space-y-5 text-sm">
+                <section class="space-y-2" aria-labelledby="localStorageTitle">
+                    <h4 id="localStorageTitle" class="font-semibold">操作日誌</h4>
+                    <p class="text-xs text-warm-500">保留最近 100 筆操作結果，不保存日記內文與照片。清除日誌不影響日記或同步識別紀錄。</p>
+                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><div id="syncedEntries" class="space-y-2 break-words"></div>
+                </section>
                 <div class="space-y-2">
                     <label for="driveClientId" class="block font-semibold">Google Drive 設定</label>
                     <input id="driveClientId" placeholder="Google OAuth 用戶端 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs">
@@ -469,6 +476,7 @@
                 this.checkPlatform();
                 this.connectionReady = this.restoreConnections();
                 this.offlineReady = this.refreshOffline();
+                setInterval(() => this.updateOfflineButtons(), 30000);
                 window.addEventListener('online', () => this.syncOffline());
                 window.addEventListener('offline', () => this.refreshOffline());
                 this.offlineTimer = setInterval(() => this.syncOffline(), 60000);
@@ -489,6 +497,7 @@
             }
 
             checkPlatform() {
+                this.updateOfflineButtons();
                 const localName = this.rootDirHandle?.name || this.localDirectoryName || '';
                 const folderButton = document.getElementById('dirBtn');
                 const driveButton = document.getElementById('driveBtn');
@@ -1342,6 +1351,33 @@
                 }
             }
 
+            recordOperation(title, type, result, reason = '') {
+                try {
+                    const logs = JSON.parse(localStorage.getItem('shiguang_operation_logs') || '[]');
+                    logs.unshift({time:Date.now(), title, type, result, reason});
+                    localStorage.setItem('shiguang_operation_logs', JSON.stringify(logs.slice(0,100)));
+                    this.renderOperationLogs();
+                } catch (error) { console.warn('操作日誌無法保存', error); }
+            }
+
+            renderOperationLogs() {
+                try {
+                    const logs = JSON.parse(localStorage.getItem('shiguang_operation_logs') || '[]');
+                    document.getElementById('syncedEntries').innerHTML = logs.length ? logs.map(log => '<div class="border rounded-xl p-3 text-xs"><p>' + escapeHtml(new Date(log.time).toLocaleString('zh-TW')) + '・' + escapeHtml(log.type) + '・' + escapeHtml(log.result) + '</p><p class="mt-1">' + escapeHtml(log.title) + '</p>' + (log.reason ? '<p class="mt-1">' + escapeHtml(log.reason) + '</p>' : '') + '</div>').join('') : '<p class="text-xs text-warm-500">目前沒有操作日誌。</p>';
+                } catch (error) { document.getElementById('syncedEntries').textContent = '無法讀取操作日誌。'; }
+            }
+
+            clearOperationLogs() {
+                if (!confirm('清除操作日誌？日記及同步識別紀錄會保留。')) return;
+                localStorage.removeItem('shiguang_operation_logs'); this.renderOperationLogs();
+            }
+
+            async finishSyncedEntry(entry) {
+                this.recordOperation(entry.title, entry.target ? '修改並上傳' : '新增並上傳', '成功');
+                const compact = {id:entry.id,rootId:entry.rootId,clientId:entry.clientId,importKey:entry.importKey,title:entry.title,date:entry.date,created:entry.created,status:'synced',receipt:true,ids:entry.ids,target:entry.target ? {folderId:entry.target.folderId,noteId:entry.target.noteId} : undefined};
+                await this.offlineStore('put', compact);
+            }
+
             async offlineStore(action, value) {
                 const db = await new Promise((resolve, reject) => {
                     const r = indexedDB.open('shiguang_offline', 1);
@@ -1354,6 +1390,16 @@
                     const r = action === 'all' ? store.getAll() : action === 'put' ? store.put(value) : store.delete(value);
                     tx.oncomplete = () => resolve(r.result); tx.onabort = tx.onerror = () => reject(tx.error || new Error('本機儲存失敗'));
                 }); } finally { db.close(); }
+            }
+
+            updateOfflineButtons() {
+                const connected = !!(this.rootDirHandle || this.localDirectoryName || (this.driveRoot && this.driveToken && Date.now() < this.driveExpires));
+                const add = document.getElementById('newOfflineDiaryBtn');
+                add.disabled = connected;
+                add.title = connected ? '已連接資料來源，請使用「寫新日記」' : '新增儲存在此裝置的離線日記';
+                const upload = document.getElementById('uploadDiaryBtn');
+                upload.disabled = !this.pendingOfflineCount || !!this.uploadBusy || !!this.offlineSyncing || !!this.driveBusy;
+                upload.title = !this.pendingOfflineCount ? '此裝置沒有待傳日記' : '上傳此裝置的待傳日記';
             }
 
             openOfflineEditor() {
@@ -1376,8 +1422,12 @@
             async refreshOffline() {
                 try {
                     const entries = await this.offlineStore('all');
+                    for (const entry of entries) if (entry.status === 'synced' && !entry.receipt) {
+                        await this.finishSyncedEntry(entry); entry.receipt = true;
+                    }
                     this.localQueuePosts ||= new Map();
                     for (const entry of entries) {
+                        if (entry.status === 'synced') continue;
                         const id = 'offline-' + entry.id;
                         let post = this.localQueuePosts.get(id);
                         if (post && JSON.stringify([post.title,post.content,post.date,post.mood,post.category]) !== JSON.stringify([entry.title,entry.content,entry.date,entry.mood,entry.category])) {
@@ -1394,11 +1444,12 @@
                         post.localEntry = entry;
                     }
                     for (const [id, post] of this.localQueuePosts) {
-                        if (!entries.some(e => 'offline-' + e.id === id) && this.viewPostId !== id) { this.releasePostImages([post]); this.localQueuePosts.delete(id); }
+                        if (!entries.some(e => e.status !== 'synced' && 'offline-' + e.id === id) && this.viewPostId !== id) { this.releasePostImages([post]); this.localQueuePosts.delete(id); }
                     }
                     for (const url of this.offlinePreviewUrls || []) URL.revokeObjectURL(url);
                     this.offlinePreviewUrls = [];
                     const pending = entries.filter(e => e.status !== 'synced').length;
+                    this.pendingOfflineCount = pending; this.updateOfflineButtons();
                     document.getElementById('offlineStatus').textContent = (navigator.onLine ? '已連網' : '離線') + `・${pending} 篇待同步` + (this.offlineSyncing ? '・同步中' : '') + (this.offlineShellReady ? '・離線網站已就緒' : '・離線網站尚未就緒');
                     const renderEntry = e => {
                         const photos = Object.entries(e.images).map(([name, blob]) => {
@@ -1409,9 +1460,8 @@
                     };
                     entries.sort((a,b) => b.created - a.created);
                     const waiting = entries.filter(e => e.status !== 'synced');
-                    const synced = entries.filter(e => e.status === 'synced');
-                    const wasOpen = document.getElementById('syncedOfflineCopies')?.open || false;
-                    document.getElementById('offlineEntries').innerHTML = waiting.map(renderEntry).join('') + (synced.length ? `<details id="syncedOfflineCopies" class="p-3 border rounded-xl" ${wasOpen ? 'open' : ''}><summary class="cursor-pointer">已同步副本（${synced.length} 篇）</summary><p class="text-xs mt-2">這些副本已同步至雲端；收合不會刪除資料，仍占用此裝置儲存空間。</p><div class="mt-2 space-y-2">${synced.map(renderEntry).join('')}</div></details>` : '');
+                    document.getElementById('offlineEntries').innerHTML = waiting.map(renderEntry).join('');
+                    this.renderOperationLogs();
                     this.renderPosts(); this.updateStats();
                 } catch (error) { document.getElementById('offlineStatus').textContent = '無法存取本機儲存空間，請勿離線寫作'; }
             }
@@ -1440,7 +1490,7 @@
                     if (!this.driveRoot || !this.driveToken || Date.now() >= this.driveExpires) return this.showToast('已保留待傳日記，請按 Google Drive 登入後自動上傳');
                     await this.syncOffline(true);
                 } catch (error) { this.showToast('無法完成上傳：' + error.message + '；已保存的待傳日記仍保留', 'error'); }
-                finally { this.uploadBusy = false; button.disabled = false; button.textContent = '上傳日記'; }
+                finally { this.uploadBusy = false; button.textContent = '上傳日記'; this.updateOfflineButtons(); }
             }
 
             async importLocalToDrive(sourcePosts = this.posts, quiet = false) {
@@ -1551,8 +1601,8 @@
                                 const markdown = `# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${mood.emoji} ${mood.name}\n- 心情ID：${entry.mood}\n- 分類：${category.name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
                                 await this.ensureOfflineFile(entry.ids.note, 'note.md', entry.ids.folder, 'text/markdown');
                                 await this.driveUpload(entry.ids.folder, 'note.md', new Blob([markdown], {type:'text/markdown'}), entry.ids.note);
-                                entry.status = 'synced'; entry.error = ''; await this.offlineStore('put', entry); changed = true;
-                            } catch (error) { entry.error = error.message; await this.offlineStore('put', entry); break; }
+                                entry.status = 'synced'; entry.error = ''; await this.finishSyncedEntry(entry); changed = true;
+                            } catch (error) { entry.error = error.message; await this.offlineStore('put', entry); this.recordOperation(entry.title, entry.target ? '修改並上傳' : '新增並上傳', entry.conflict ? '版本衝突' : '失敗', error.message); break; }
                             finally { this.syncingEntryId = null; await this.refreshOffline(); }
                         }
                         if (changed) {
@@ -1834,7 +1884,7 @@
                 // Remove only references deleted by this edit, after Markdown is confirmed published.
                 const refs=new Set(this.imagePaths(entry.content));
                 for(const path of new Set(this.imagePaths(target.originalContent))){if(!refs.has(path)&&target.originalImages[path])await this.driveRequest('files/'+target.originalImages[path]+'?supportsAllDrives=true',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});}
-                entry.status='synced';entry.error='';entry.conflict=false;await this.offlineStore('put',entry);
+                entry.status='synced';entry.error='';entry.conflict=false;await this.finishSyncedEntry(entry);
             }
 
             async keepConflictCopy(id) {
@@ -1934,7 +1984,7 @@
                 const config = this.getDriveConfig();
                 document.getElementById('driveClientId').value = config.clientId || '';
                 document.getElementById('driveFolderUrl').value = config.folderId || '';
-                this.updateSettingsUI();
+                this.updateSettingsUI(); this.renderOperationLogs();
                 document.getElementById('settingsModal').classList.remove('hidden');
             }
 

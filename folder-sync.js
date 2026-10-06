@@ -125,8 +125,9 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
             manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,base:snap.signature});await saveManifest();
         }
         for(const [path,snap]of locals){if(manifest.pairs.some(p=>p.path===path))continue;const pair={path};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
+        this.recordOperation('本機與雲端', '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
         this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
-    } catch(error){this.showToast('同步停止，既有資料保留：'+error.message,'error');}
+    } catch(error){this.recordOperation('本機與雲端','雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
     finally {
         this.releasePostImages(remotePosts);this.folderSyncBusy=false;this.driveBusy=false;
         try{if(this.sourceMode==='local')await this.loadPostsFromFolder();await this.reloadDrivePosts();}catch(e){this.showToast('請重新讀取列表：'+e.message,'error');}
