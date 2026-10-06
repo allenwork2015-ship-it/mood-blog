@@ -106,6 +106,11 @@
                 min-width: 0; width: 100%; min-height: 44px; white-space: nowrap;
             }
         }
+            #dirBtn, #driveBtn { background: #f2efeb; color: #685c50; }
+        #dirBtn[data-connected="true"], #driveBtn[data-connected="true"] { background: #68594b; color: #fff; }
+        .dark #dirBtn, .dark #driveBtn { background: #292524; color: #a8a29e; }
+        .dark #dirBtn[data-connected="true"], .dark #driveBtn[data-connected="true"] { background: #d6c9bc; color: #292524; }
+        #dirLabel { white-space: normal; overflow-wrap: anywhere; }
     </style>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
@@ -130,7 +135,7 @@
                     <i class="fa-solid fa-folder-open"></i>
                     <span id="dirLabel" class="max-w-[80px] sm:max-w-none truncate">選擇資料夾</span>
                 </button>
-                <button onclick="app.connectDrive()" class="journal-header-drive px-3 py-2 bg-warm-100 dark:bg-stone-800 rounded-full text-xs" title="登入並連接 Google Drive">Google Drive</button>
+                <button onclick="app.connectDrive()" id="driveBtn" class="journal-header-drive px-3 py-2 bg-warm-100 dark:bg-stone-800 rounded-full text-xs" title="登入並連接 Google Drive">Google Drive</button>
                 <button onclick="app.openEditor()" data-write-action class="hidden sm:flex px-4 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-sm font-medium rounded-full shadow-sm transition-all items-center space-x-2">
                     <i class="fa-solid fa-pen-nib"></i>
                     <span>寫新日記</span>
@@ -150,12 +155,10 @@
     <section class="max-w-5xl w-full mx-auto px-4 mt-4" aria-label="離線日記">
         <div class="flex flex-wrap gap-2 items-center">
             <button onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
-            <button onclick="app.importLocalToDrive()" class="px-4 py-3 rounded-full border text-sm">將本機日記加入雲端待傳</button>
-            <button onclick="app.syncOffline(true)" class="px-4 py-3 rounded-full border text-sm">同步待傳日記</button>
-            <button onclick="app.exportOfflineBackup()" class="border rounded-full px-3 py-2 text-xs">匯出待傳備份</button><button onclick="document.getElementById('offlineBackupInput').click()" class="border rounded-full px-3 py-2 text-xs">還原備份</button><input id="offlineBackupInput" type="file" accept=".json,application/json" hidden onchange="app.importOfflineBackup(event)">
+            <button id="uploadDiaryBtn" onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
         </div>
-<div class="mt-2 flex flex-wrap gap-2 items-center"><span id="connectionStatus" class="text-xs"></span><button onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button></div>
+<div class="mt-2 flex flex-wrap gap-2 items-center"><button onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button></div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
     <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -231,44 +234,35 @@
             </div>
             <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-warm-700 dark:text-stone-300 leading-relaxed font-sans flex-grow">
                 <section class="space-y-2">
-                    <h4 class="font-bold text-sm">1．開始使用</h4>
-                    <p><strong>本機：</strong>按「選擇資料夾」，選取日記根目錄。電腦支援的瀏覽器可讀寫；手機本機模式通常只能閱讀。</p>
-                    <p><strong>Google Drive：</strong>首次按「Google Drive」，在設定填入你有權限存取的筆記資料夾網址，儲存後登入；OAuth 用戶端 ID 已預設。之後通常只需選帳號。同一分頁重新整理會嘗試恢復有效授權，過期時需再登入。</p>
-                    <p>更換雲端資料夾：齒輪 →「Google Drive 設定」→ 修改網址 → 儲存 → 登入並連接。</p>
+                    <h4 class="font-bold text-sm">1．手機：雲端與離線寫作</h4>
+                    <p>首次到齒輪設定 Google Drive 筆記資料夾網址，儲存後按「Google Drive」登入；用戶端 ID 已預設。按「寫新日記」或筆尖寫作，文字與照片先存此裝置，再背景上傳。</p>
+                    <p>離線前等顯示「離線網站已就緒」。沒網路時按「新增離線日記」；網頁開著、連網且授權有效後自動上傳，也可按「上傳日記」。授權到期需重新登入。</p>
                 </section>
                 <section class="space-y-2">
-                    <h4 class="font-bold text-sm">2．寫作與閱讀</h4>
-                    <p>按筆尖或「寫新日記」新增文章，可插入照片；開啟日記後可編輯或刪除。雲端刪除文章會將文章資料夾移至垃圾桶；移除內文照片並儲存後，對應照片也會移至垃圾桶。</p>
-                    <p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。雲端封面按頁載入，文章內其餘照片在開啟後載入。網頁視窗可按 X 或 Esc 關閉；關閉不會自動儲存。</p>
+                    <h4 class="font-bold text-sm">2．電腦：本機資料夾</h4>
+                    <p>先按「選擇資料夾」，再新增或編輯日記；照片與文章存入所選資料夾。需使用支援資料夾讀寫的瀏覽器，唯讀模式無法修改原檔。</p>
+                    <p><strong>只用本機時，請勿設定雲端筆記資料夾。</strong>目前已有雲端資料夾設定時，本機新增日記也會自動加入待傳，授權有效且連網時上傳；尚未提供獨立的同步啟用開關。</p>
                 </section>
                 <section class="space-y-2">
-                    <h4 class="font-bold text-sm">3．離線與同步</h4>
-                    <p>先連網設定雲端資料夾，等顯示「離線網站已就緒」。沒網路時按「新增離線日記」，文字與照片會先存於此裝置；待同步清單可展開查看。</p>
-                    <p>新增日記按儲存後，會先保存於此裝置並立即出現在列表；不必等雲端上傳。網頁開著、恢復網路且授權有效時會在背景同步，上傳期間仍可閱讀及新增日記，也可按「同步待傳日記」。列表與待傳清單顯示待同步、同步中、已同步或重試；既有雲端日記的修改也會先存裝置，再背景上傳；上傳前會檢查雲端版本。若有衝突，保留本機修改並暫停該篇上傳，可另存副本，原雲端文章保留。可展開「比較版本」檢視雲端與本機文字。版本檢查尚非跨裝置鎖定，請避免同時修改同一篇。修改日記的備份還原採新增副本，不直接覆寫雲端；若原照片未下載且無網路，須連網後才能匯出完整照片備份。授權過期請重新登入；關閉網頁或鎖定手機後，不保證背景同步。</p>
-                    <p><strong>匯入本機日記：</strong>設定雲端資料夾 → 選取本機資料夾 →「將本機日記加入雲端待傳」→ 登入 Google Drive。本機與雲端可同時連線，透過「查看本機／查看雲端」切換列表。設定雲端資料夾後，本機新增日記儲存即自動加入待傳；登入授權有效時背景上傳。手動匯入用於搬移既有日記。手動匯入仍是單向複製。兩邊皆連接後，可按「同步本機與雲端」比對並更新文字與照片；雙邊修改時保留兩邊，不自動覆寫。同步刪除逐篇詢問，取消不刪除。本機更新與刪除前會備份到 .shiguang-backups；照片可位於文章子資料夾（例如 images/photo.jpg），同步會保留相對路徑。對應紀錄存於 .shiguang-sync.json，請勿移除。待傳清單須先同步完成，再執行雙向同步。</p>
-                    <p>已同步副本預設收合，確認雲端內容後可移除本機副本。待傳日記綁定原設定資料夾；已載入的雲端日記可先保存修改；未載入的雲端文章仍需連網取得。雲端文章刪除仍需連線。</p>
+                    <h4 class="font-bold text-sm">3．筆電：本機與雲端同步</h4>
+                    <p>本機資料夾與 Google Drive 可同時連接，用「查看本機／查看雲端」切換。離線時可寫入本機；連網後先完成待傳上傳，再按「同步本機與雲端」比對文字與照片。<strong>雙向同步目前需手動按鈕啟動。</strong></p>
+                    <p>單邊修改會更新另一邊；兩邊都修改時保留原資料並提示衝突。同步刪除逐篇確認，取消不刪除。請避免多台裝置同時修改同一篇。</p>
+                    <p>「上傳日記」是單向複製本機日記至雲端，修改後再次匯入可能新增副本；更新已有對應的日記請用雙向同步。</p>
                 </section>
                 <section class="space-y-2">
-                    <h4 class="font-bold text-sm">4．資料保存</h4>
-                    <p>待傳日記存於此裝置，正常重新整理或關閉後再開啟仍會保留。單獨刪除 Cookie 不會直接刪除日記，但「Cookie 與其他網站資料」等清除選項可能一併刪除日記、照片與設定。</p>
-                    <p><strong>清除網站資料前，請先確認全部日記已同步。</strong>避免使用無痕模式；換裝置或瀏覽器不會帶入本機副本。可按「匯出待傳備份」保存包含文字與照片的 JSON 檔，再用「還原備份」匯入；還原不會覆寫同 ID 日記。備份含私人日記內容，請妥善保存。本機保存不等同雲端備份。未開始上傳的日記可在待傳清單按「編輯待傳日記」；本機原檔不會跟著修改，已開始上傳的項目須同步完成後再編輯雲端文章。</p>
+                    <h4 class="font-bold text-sm">4．閱讀與資料保存</h4>
+                    <p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。待傳日記未開始上傳前可編輯或刪除；已同步副本可移除此裝置副本，雲端仍保留。編輯已同步日記需連接原雲端資料夾。</p>
+                    <p><strong>離線不保證能閱讀全部雲端日記。</strong>本機檔案與已存於此裝置的內容可讀；未下載的雲端文章及照片仍需網路。關閉網頁或鎖定手機後，不保證背景上傳。</p>
+                    <p>正常重新整理會保留待傳資料；清除網站資料、使用無痕模式或更換裝置可能無法保留。清除前請確認所有日記已同步。視窗可按 X 或 Esc 關閉，關閉不會自動儲存。</p>
                 </section>
                 <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
-                    <summary class="cursor-pointer font-semibold">進階設定</summary>
+                    <summary class="cursor-pointer font-semibold">設定與問題排查</summary>
                     <div class="mt-3 space-y-2">
-                        <p>本機筆記結構：根目錄／年份／文章資料夾／note.md，相容 Obsidian。Google Drive 的根目錄可先為空，再新增日記。</p>
-                        <p>一般使用者可保留預設 OAuth 用戶端 ID。自行部署或使用自己的用戶端時，請參考 <a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">完整設定說明（含 Google Cloud 步驟）</a>。</p>
-                        <p>目前授權範圍涵蓋整個 Drive，程式操作指定的筆記資料夾。請勿將用戶端密鑰放入網頁。</p>
+                        <p>更換雲端資料夾：齒輪 → Google Drive 設定 → 修改網址 → 儲存 → 登入。待傳日記仍綁定原資料夾。其他裝置更新後，到設定按「重新讀取」。</p>
+                        <p>無法上傳時，檢查網路、Google 授權、資料夾編輯權限及待傳錯誤訊息。Google Drive 請由正式 HTTPS 網址使用。</p>
+                        <p>雙向同步的對應紀錄為 .shiguang-sync.json，本機更新前的備份在 .shiguang-backups，請保留。</p>
+                        <p><a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">部署與 Google Cloud 完整設定說明</a></p>
                     </div>
-                </details>
-                <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
-                    <summary class="cursor-pointer font-semibold">常見問題</summary>
-                    <ul class="mt-3 list-disc pl-5 space-y-2">
-                        <li><strong>Google 登入失敗：</strong>請使用正式 HTTPS 網址；測試版帳號需獲管理者加入測試使用者。origin_mismatch 表示網站來源與 OAuth 設定不符。</li>
-                        <li><strong>不能寫入：</strong>確認登入帳號具有資料夾編輯權限。修改資料夾網址不會變更 Drive 的分享權限。</li>
-                        <li><strong>待傳日記未同步：</strong>確認有網路、已登入且授權有效，並連接原設定資料夾；展開待傳日記可查看錯誤訊息。</li>
-                        <li><strong>其他裝置更新後沒看到：</strong>在設定按「重新讀取」。切換資料來源前先儲存尚未完成的內文。</li>
-                    </ul>
                 </details>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
@@ -490,12 +484,19 @@
                 this.closeEditor(); this.closeViewModal();
                 this.sourceMode = mode; this.posts = mode === 'local' ? this.localPosts : this.drivePosts;
                 this.readOnly = mode === 'local' ? false : this.driveReadOnly;
-                document.getElementById('dirLabel').textContent = mode === 'local' ? this.rootDirHandle.name : this.driveRoot.name + '（雲端）';
+                
                 this.currentPage = 1; this.checkPlatform(); this.renderPosts(); this.updateStats();
             }
 
             checkPlatform() {
-                document.getElementById('connectionStatus').textContent = `本機：${this.rootDirHandle?.name || '未連接'}・Google Drive：${this.driveRoot ? (Date.now() < this.driveExpires ? '已連接' : '授權到期') : '未連接'}`;
+                const localName = this.rootDirHandle?.name || this.localDirectoryName || '';
+                const folderButton = document.getElementById('dirBtn');
+                const driveButton = document.getElementById('driveBtn');
+                folderButton.dataset.connected = String(!!localName);
+                driveButton.dataset.connected = String(!!(this.driveRoot && this.driveToken && Date.now() < this.driveExpires));
+                document.getElementById('dirLabel').textContent = localName ? '本機：' + localName : '選擇資料夾';
+                folderButton.title = localName ? '已選擇本機資料夾：' + localName : '選擇本機資料夾';
+                driveButton.title = driveButton.dataset.connected === 'true' ? '已連接 Google Drive：' + this.driveRoot.name : '登入並連接 Google Drive';
                 if (this.sourceMode === 'drive') {
                     document.getElementById('deviceModeHint').textContent = this.readOnly ? 'Google Drive 唯讀（資料夾權限不足）' : 'Google Drive 雲端讀寫模式';
                 }
@@ -503,7 +504,7 @@
                 if (this.sourceMode !== 'drive') document.getElementById('deviceModeHint').textContent = this.readOnly
                     ? (directorySupported ? '唯讀瀏覽模式・重新選取以更新' : '此瀏覽器不支援資料夾選取')
                     : '資料夾讀寫模式';
-                document.querySelectorAll('[data-write-action], #viewEditBtn, #viewDeleteBtn').forEach(button => {
+                document.querySelectorAll('[data-write-action]').forEach(button => {
                     button.disabled = this.readOnly;
                     button.style.display = this.readOnly ? 'none' : '';
                 });
@@ -569,7 +570,7 @@
                     this.sourceMode = 'local';
                     this.readOnly = true;
                     this.posts = loaded.sort((a, b) => new Date(b.date) - new Date(a.date));
-                    document.getElementById('dirLabel').textContent = files[0].webkitRelativePath.split('/')[0] + '（唯讀）';
+                    this.localDirectoryName = files[0].webkitRelativePath.split('/')[0] + '（唯讀）';
                     this.checkPlatform();
                     this.renderPosts();
                     this.updateStats();
@@ -678,7 +679,7 @@
                 this.closeEditor();
                 this.closeViewModal();
                 this.checkPlatform();
-                document.getElementById('dirLabel').textContent = handle.name;
+                
                 await this.loadPostsFromFolder();
                 document.getElementById('resumeDirectoryBtn').style.display = 'none';
             }
@@ -1243,14 +1244,25 @@
                 document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>');
 
                 document.getElementById('viewEditBtn').onclick = () => {
+                    if (post.localEntry) return this.editLocalCopy(post.localEntry.id);
                     this.closeViewModal();
                     this.openEditor(post.id);
                 };
                 document.getElementById('viewDeleteBtn').onclick = () => {
+                    if (post.localEntry) return this.deleteLocalCopy(post.localEntry.id);
                     this.deletePost(post.id);
                 };
 
-                for (const id of ['viewEditBtn', 'viewDeleteBtn']) { document.getElementById(id).style.display = post.localEntry || this.readOnly ? 'none' : ''; }
+                const entry = post.localEntry;
+                const busyEntry = entry && (this.offlineSyncing || (entry.status !== 'synced' && (entry.ids || entry.target)));
+                for (const id of ['viewEditBtn', 'viewDeleteBtn']) {
+                    const button = document.getElementById(id);
+                    button.style.display = entry || !this.readOnly ? '' : 'none';
+                    button.disabled = entry ? !!busyEntry : this.readOnly;
+                    button.title = busyEntry ? '已開始上傳，請待同步完成後操作' : '';
+                }
+                document.getElementById('viewEditBtn').textContent = entry?.status === 'synced' ? '編輯雲端日記' : '編輯日記';
+                document.getElementById('viewDeleteBtn').textContent = entry?.status === 'synced' ? '移除此裝置副本' : '刪除日記';
                 document.getElementById('viewModal').classList.remove('hidden');
                 if (Object.keys(post.driveImages || {}).some(path => !post.imagesMap[path])) {
                     this.loadViewImages(post).then(() => {
@@ -1265,6 +1277,44 @@
                 this.viewPostId = null;
                 this.releasePostImages(this.retiredViewPosts || []); this.retiredViewPosts = [];
                 document.getElementById('viewModal').classList.add('hidden');
+            }
+
+            async editLocalCopy(id) {
+                try {
+                    const entry = (await this.offlineStore('all')).find(e => e.id === id);
+                    if (!entry) return;
+                    if (entry.status !== 'synced') {
+                        if (entry.ids || entry.target || this.offlineSyncing) return this.showToast('同步中的日記請待完成後再修改', 'error');
+                        this.closeViewModal(); return await this.editOfflineEntry(id);
+                    }
+                    if (!navigator.onLine || !this.driveRoot || this.driveRoot.id !== entry.rootId || !this.driveToken || Date.now() >= this.driveExpires || this.driveReadOnly) return this.showToast('請連接原本的 Google Drive 筆記資料夾，再編輯已同步日記；本機副本仍保留', 'error');
+                    if (this.driveBusy) return this.showToast('同步進行中，請稍候再編輯', 'error');
+                    this.driveBusy = true;
+                    let posts;
+                    try { posts = await this.fetchDrivePosts(entry.rootId); }
+                    finally { this.driveBusy = false; }
+                    const post = posts.find(p => p.id === (entry.target?.folderId || entry.ids?.folder));
+                    if (!post) { this.releasePostImages(posts); return this.showToast('原雲端日記不存在或無法存取，本機副本仍保留', 'error'); }
+                    this.closeViewModal(); this.releasePostImages(this.drivePosts || []);
+                    this.drivePosts = posts; this.showSource('drive'); this.openEditor(post.id);
+                } catch (error) { this.showToast('無法開啟編輯：' + error.message, 'error'); }
+            }
+
+            async deleteLocalCopy(id) {
+                const perform = async () => {
+                    if (this.offlineSyncing) return this.showToast('同步進行中，請稍候再刪除', 'error');
+                    const entry = (await this.offlineStore('all')).find(e => e.id === id);
+                    if (!entry) return;
+                    if (entry.status !== 'synced' && (entry.ids || entry.target)) return this.showToast('已開始上傳，請待同步完成後操作', 'error');
+                    if (!confirm(entry.status === 'synced' ? '移除此裝置副本？Google Drive 的日記會保留。' : '刪除這篇尚未同步的日記與照片？刪除後無法復原，也不會再上傳。')) return;
+                    await this.offlineStore('delete', id);
+                    if (this.viewPostId === 'offline-' + id) this.closeViewModal();
+                    await this.refreshOffline(); this.showToast('已移除本機日記');
+                };
+                try {
+                    if (navigator.locks) return await navigator.locks.request('shiguang-offline-sync', {ifAvailable:true}, lock => lock ? perform() : this.showToast('另一個分頁正在同步，請稍候', 'error'));
+                    return await perform();
+                } catch (error) { this.showToast('移除失敗：' + error.message, 'error'); }
             }
 
             async deletePost(postId) {
@@ -1323,53 +1373,6 @@
                 this.stagedImages = {...entry.images};
             }
 
-            async exportOfflineBackup() {
-                try {
-                    const entries = (await this.offlineStore('all')).filter(e => e.status !== 'synced');
-                    if (!entries.length) return this.showToast('沒有待同步日記需要備份');
-                    const encoded = [];
-                    for (const entry of entries) {
-                        const images = {};
-                        for (const [name, blob] of Object.entries(entry.images)) {
-                            const data = await new Promise((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=()=>reject(reader.error); reader.readAsDataURL(blob); });
-                            images[name] = {type:blob.type, data:data.split(',')[1]};
-                        }
-                        for(const [name,id] of Object.entries(entry.remoteImages||{})) {
-                            if(images[name])continue;
-                            const blob=entry.cacheImages?.[name] || await this.driveRequest('files/'+id+'?alt=media&supportsAllDrives=true',{},'blob');
-                            const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});
-                            images[name]={type:blob.type,data:data.split(',')[1]};
-                        }
-                        const copy={...entry, images};
-                        if(copy.target){copy.title+='（修改備份副本）';delete copy.target;delete copy.ids;delete copy.published;delete copy.editImageIds;}
-                        delete copy.cacheImages;delete copy.remoteImages;delete copy.originalTarget;
-                        encoded.push(copy);
-                    }
-                    const url = URL.createObjectURL(new Blob([JSON.stringify({format:'shiguang-offline-backup',version:1,entries:encoded})], {type:'application/json'}));
-                    const link = document.createElement('a'); link.href=url; link.download='拾光手札待傳備份-'+new Date().toISOString().slice(0,10)+'.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),60000);
-                    this.showToast('備份已產生，請確認下載檔案已保存');
-                } catch (error) { this.showToast('備份失敗：'+error.message, 'error'); }
-            }
-
-            async importOfflineBackup(event) {
-                const file=event.target.files?.[0]; if(!file)return;
-                try {
-                    const backup=JSON.parse(await file.text());
-                    if(backup.format!=='shiguang-offline-backup'||backup.version!==1||!Array.isArray(backup.entries))throw new Error('不是支援的備份格式');
-                    const existing = await this.offlineStore('all'); const decoded=[];
-                    for(const raw of backup.entries){
-                        if(!/^[a-zA-Z0-9-]+$/.test(raw.id)||typeof raw.title!=='string'||typeof raw.content!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)||typeof raw.rootId!=='string'||typeof raw.clientId!=='string'||!raw.images||typeof raw.images!=='object')throw new Error('備份內容不完整');
-                        if(raw.ids && (!/^[\w-]+$/.test(raw.ids.folder)||!/^[\w-]+$/.test(raw.ids.note)||!raw.ids.images||Object.values(raw.ids.images).some(id=>typeof id!=='string'||!/^[\w-]+$/.test(id))))throw new Error('備份同步識別碼不完整');
-                        const images={};
-                        for(const [name,image] of Object.entries(raw.images)) {const bytes=Uint8Array.from(atob(image.data),c=>c.charCodeAt(0));images[name]=new Blob([bytes],{type:image.type||'application/octet-stream'});}
-                        decoded.push({id:raw.id,title:raw.title,content:raw.content,date:raw.date,mood:raw.mood,category:raw.category,rootId:raw.rootId,clientId:raw.clientId,created:Number(raw.created)||Date.now(),status:'pending',images,ids:raw.ids,importKey:raw.importKey});
-                    }
-                    let added=0;
-                    for(const entry of decoded){if(existing.some(e=>e.id===entry.id))continue;await this.offlineStore('put',entry);existing.push(entry);added++;}
-                    await this.refreshOffline();this.showToast(`已還原 ${added} 篇；同 ID 日記不會覆寫，請確認原雲端設定後同步`);
-                }catch(error){this.showToast('還原失敗：'+error.message,'error');}finally{event.target.value='';}
-            }
-
             async refreshOffline() {
                 try {
                     const entries = await this.offlineStore('all');
@@ -1416,13 +1419,33 @@
             async removeOfflineCopy(id) {
                 const entries = await this.offlineStore('all');
                 if (!entries.find(e => e.id === id && e.status === 'synced')) return;
-                if (!confirm('雲端已同步，移除此裝置的副本？')) return;
-                await this.offlineStore('delete', id); await this.refreshOffline();
+                return this.deleteLocalCopy(id);
             }
 
-            async importLocalToDrive() {
+            async uploadDiaries() {
+                if (this.uploadBusy || this.importBusy || this.driveBusy || this.offlineSyncing) return this.showToast('目前正在處理日記，請稍候', 'error');
+                this.uploadBusy = true;
+                const button = document.getElementById('uploadDiaryBtn');
+                button.disabled = true; button.textContent = '處理中…';
+                try {
+                    const config = this.getDriveConfig();
+                    const local = this.rootDirHandle ? [...this.localPosts] : this.sourceMode === 'local' ? [...this.posts] : [];
+                    if (local.length) {
+                        if (!config.folderId) { this.openSettings(); return this.showToast('請先設定 Google Drive 筆記資料夾', 'error'); }
+                        await this.importLocalToDrive(local, true);
+                    }
+                    const pending = (await this.offlineStore('all')).filter(e => e.status !== 'synced');
+                    if (!pending.length) return this.showToast('沒有待傳日記');
+                    if (!navigator.onLine) return this.showToast('已保留待傳日記，連網且 Google 授權有效時會自動上傳');
+                    if (!this.driveRoot || !this.driveToken || Date.now() >= this.driveExpires) return this.showToast('已保留待傳日記，請按 Google Drive 登入後自動上傳');
+                    await this.syncOffline(true);
+                } catch (error) { this.showToast('無法完成上傳：' + error.message + '；已保存的待傳日記仍保留', 'error'); }
+                finally { this.uploadBusy = false; button.disabled = false; button.textContent = '上傳日記'; }
+            }
+
+            async importLocalToDrive(sourcePosts = this.posts, quiet = false) {
                 if (this.driveBusy || this.importBusy) return this.showToast('目前操作進行中，請稍候', 'error');
-                if (this.sourceMode !== 'local' || !this.posts.length) return this.showToast('請先選擇本機資料夾並載入日記', 'error');
+                if (!sourcePosts.length) return this.showToast('請先選擇本機資料夾並載入日記', 'error');
                 const config = this.getDriveConfig();
                 if (!config.folderId) { this.openSettings(); return this.showToast('請先設定雲端筆記資料夾，再匯入本機日記', 'error'); }
                 this.importBusy = true;
@@ -1430,7 +1453,7 @@
                 try {
                     const entries = await this.offlineStore('all');
                     const sourceName = this.rootDirHandle?.name || document.getElementById('dirLabel').textContent;
-                    for (const post of [...this.posts]) {
+                    for (const post of [...sourcePosts]) {
                         const images = {};
                         for (const path of new Set(this.imagePaths(post.content))) {
                             if (post.imagesMap[path]) images[path] = await (await fetch(post.imagesMap[path])).blob();
@@ -1442,7 +1465,7 @@
                         await this.offlineStore('put', entry); entries.push(entry); added++;
                     }
                     await this.refreshOffline();
-                    this.showToast(`已加入 ${added} 篇待傳日記，本機原檔保留；請按 Google Drive 登入完成同步`);
+                    if (!quiet) this.showToast(`已加入 ${added} 篇待傳日記，本機原檔保留；請按 Google Drive 登入完成同步`);
                 } catch (error) { await this.refreshOffline(); this.showToast(`已加入 ${added} 篇，其餘匯入失敗：` + error.message, 'error'); }
                 finally { this.importBusy = false; }
             }
@@ -1607,7 +1630,7 @@
                     document.getElementById('resumeDirectoryBtn').style.display = 'none';
                     try { sessionStorage.setItem('shiguang_drive_session', JSON.stringify({token:this.driveToken, expires:this.driveExpires, clientId:config.clientId, folderId:config.folderId})); } catch (error) {}
                     this.sourceMode = this.rootDirHandle ? 'local' : 'drive'; this.readOnly = this.rootDirHandle ? false : this.driveReadOnly;
-                    document.getElementById('dirLabel').textContent = this.rootDirHandle ? this.rootDirHandle.name : root.name + '（雲端）';
+                    
                     this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings();
                     this.showToast(`已連接 Google Drive，載入 ${posts.length} 篇日記`);
                 } catch (error) { this.showToast(error.message, 'error'); }
