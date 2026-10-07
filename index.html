@@ -1451,12 +1451,18 @@
                 return this.rootDirHandle && config.folderId ? JSON.stringify([this.rootDirHandle.name, config.folderId, config.clientId]) : null;
             }
 
+            isPhoneDevice() {
+                return navigator.userAgentData?.mobile === true || /iPhone|iPod|Android.*Mobile|Windows Phone/i.test(navigator.userAgent);
+            }
+
             isFolderSyncEnabled() {
+                if (this.isPhoneDevice()) return false;
                 try { return !!this.folderSyncKey() && localStorage.getItem('shiguang_folder_auto_sync') === this.folderSyncKey(); }
                 catch (error) { return false; }
             }
 
             setFolderSyncEnabled(enabled) {
+                if (this.isPhoneDevice()) { this.updateFolderSyncUI(); return this.showToast('手機不需啟用本機雙向同步，日記仍會自動上傳', 'error'); }
                 if (this.folderSyncBusy || this.driveBusy) { this.showToast('操作進行中，請完成後再變更同步設定', 'error'); this.updateFolderSyncUI(); return; }
                 try {
                     const key = this.folderSyncKey();
@@ -1471,7 +1477,13 @@
 
             updateFolderSyncUI() {
                 const enabled = this.isFolderSyncEnabled();
-                document.getElementById('folderSyncEnabled').checked = enabled;
+                const checkbox = document.getElementById('folderSyncEnabled');
+                const phone = this.isPhoneDevice();
+                checkbox.checked = enabled;
+                checkbox.disabled = phone;
+                checkbox.closest('label').style.opacity = phone ? '0.45' : '';
+                checkbox.closest('label').style.cursor = phone ? 'not-allowed' : '';
+                document.getElementById('folderSyncHint').textContent = phone ? '手機不需啟用本機雙向同步。雲端寫作與離線待傳日記仍會在連網且授權有效時自動上傳。' : '預設關閉。開啟後，本機儲存、恢復網路或回到頁面時延遲同步。閱讀與編輯期間暫緩；衝突及刪除請手動處理。';
                 const button = document.getElementById('folderSyncBtn');
                 button.disabled = !this.rootDirHandle || !this.driveRoot || this.driveRoot.id !== this.getDriveConfig().folderId || !this.driveToken || Date.now() >= this.driveExpires || this.driveReadOnly || !navigator.onLine || this.driveBusy || this.folderSyncBusy;
                 button.title = '連接本機及原雲端資料夾後，手動同步';
