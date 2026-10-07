@@ -14,7 +14,7 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
     const file = async (dir, path, create = false) => {const parts = split(path); let d = dir; for (const part of parts.slice(0,-1)) d = await d.getDirectoryHandle(part, {create}); return d.getFileHandle(parts.at(-1), {create});};
     const write = async (dir, path, data) => {const handle = await file(dir,path,true), stream = await handle.createWritable(); await stream.write(data); await stream.close();};
     const hash = async data => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', typeof data === 'string' ? new TextEncoder().encode(data) : await data.arrayBuffer())), v=>v.toString(16).padStart(2,'0')).join('');
-    const sign = async snap => {const list=[await hash(snap.md)];for(const name of Object.keys(snap.images).sort())list.push(name,await hash(snap.images[name]));return hash(JSON.stringify(list));};
+    const sign = async snap => {const list=[await hash(snap.md.replace(/<!-- shiguang-id: [A-Za-z0-9-]+ -->\n?/g, ''))];for(const name of Object.keys(snap.images).sort())list.push(name,await hash(snap.images[name]));return hash(JSON.stringify(list));};
     const localSnapshot = async path => {
         const dir = await directory(path), md = await (await (await dir.getFileHandle('note.md')).getFile()).text();
         const parsed = this.parseMarkdownPost(path.split('/').at(-1),md), images={};
@@ -93,7 +93,15 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
         const remotes=new Map();for(const post of remotePosts)remotes.set(post.id,{post,snap:await remoteSnapshot(post)});
         for(const pair of manifest.pairs){
             if(pair.retired)continue;
-            split(pair.path);const local=locals.get(pair.path),remote=remotes.get(pair.cloudId);
+            const remote = remotes.get(pair.cloudId);
+            const journalId = pair.journalId || remote?.snap.parsed.journalId;
+            if (journalId) {
+                const candidates = [...locals].filter(([path,snap]) => snap.parsed.journalId === journalId);
+                if (candidates.length > 1) { summary.conflict++; continue; }
+                if (candidates.length === 1) pair.path = candidates[0][0];
+                pair.journalId = journalId; await saveManifest();
+            }
+            split(pair.path);const local=locals.get(pair.path);
             if(local&&remote){
                 if(local.signature===remote.snap.signature){pair.base=local.signature;await saveManifest();continue;}
                 if(!pair.base){summary.conflict++;continue;}
@@ -112,19 +120,32 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
                 }
             }else if(!local&&remote&&!pair.base){await download(pair.path,remote.snap);pair.base=remote.snap.signature;await saveManifest();}
         }
-        // Establish first-time identity only when contents (including photos) match exactly.
+        const blockedLocalPaths = new Set();
+        // Preserve divergent first-time matches without generating new copies.
         for(const [id,{post,snap}]of remotes){
             if(manifest.pairs.some(p=>p.cloudId===id))continue;
-            const matching=[...locals].filter(([path,l])=>l.signature===snap.signature&&!manifest.pairs.some(p=>p.path===path));
+            const matching=[...locals].filter(([path,l])=>(snap.parsed.journalId && l.parsed.journalId ? l.parsed.journalId===snap.parsed.journalId : l.signature===snap.signature)&&!manifest.pairs.some(p=>p.path===path));
+            if (!matching.length) {
+                const sameDiary = [...locals].filter(([path,l]) => !(l.parsed.journalId && snap.parsed.journalId && l.parsed.journalId !== snap.parsed.journalId) && l.parsed.title === snap.parsed.title && l.parsed.date === snap.parsed.date);
+                if (sameDiary.length) {
+                    sameDiary.forEach(([path]) => blockedLocalPaths.add(path));
+                    summary.conflict++;
+                    continue;
+                }
+            }
             let path;
+            if (matching.length > 1) { matching.forEach(([p]) => blockedLocalPaths.add(p)); summary.conflict++; continue; }
             if(matching.length===1)path=matching[0][0];
             else {const folder=post.folderName;if(!safe(folder))throw Error('雲端資料夾名稱無法儲存');path=(post.yearFolder||snap.parsed.date.slice(0,4))+'/'+folder;
                 try{await directory(path);path+='-drive-'+id.slice(-8);await directory(path);throw Error('匯入目的地已存在，未覆寫');}catch(e){if(e.name!=='NotFoundError')throw e;}
                 await download(path,snap);
             }
-            manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,base:snap.signature});await saveManifest();
+            const localMatch = locals.get(path);
+            const diverged = localMatch && localMatch.signature !== snap.signature;
+            if (diverged) summary.conflict++;
+            manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,journalId:snap.parsed.journalId || localMatch?.parsed.journalId,base:diverged ? null : snap.signature});await saveManifest();
         }
-        for(const [path,snap]of locals){if(manifest.pairs.some(p=>p.path===path))continue;const pair={path};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
+        for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
         this.recordOperation('本機與雲端', '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
         this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
     } catch(error){this.recordOperation('本機與雲端','雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}

@@ -243,7 +243,7 @@
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">2．電腦：本機資料夾</h4>
                     <p>先按「選擇資料夾」，再新增或編輯日記；照片與文章存入所選資料夾。需使用支援資料夾讀寫的瀏覽器，唯讀模式無法修改原檔。</p>
-                    <p><strong>只用本機時，請勿設定雲端筆記資料夾。</strong>目前已有雲端資料夾設定時，本機新增日記也會自動加入待傳，授權有效且連網時上傳；尚未提供獨立的同步啟用開關。</p>
+                    <p><strong>只用本機時，請勿設定雲端筆記資料夾。</strong>本機儲存不會自動加入雲端待傳。需要雙向更新時，請連接雲端後按「同步本機與雲端」。</p>
                 </section>
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">3．筆電：本機與雲端同步</h4>
@@ -357,6 +357,16 @@
         </div>
     </div>
 
+
+    <div id="operationLogModal" role="dialog" aria-modal="true" aria-labelledby="operationLogTitle" class="fixed inset-0 z-[60] bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col border border-warm-200 dark:border-darkBorder">
+            <div class="px-6 py-4 border-b border-warm-100 dark:border-darkBorder flex items-center justify-between">
+                <h3 id="operationLogTitle" class="font-semibold">操作日誌（最近 100 筆）</h3>
+                <button id="closeOperationLogBtn" onclick="app.closeOperationLogs()" aria-label="關閉操作日誌" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800">✕</button>
+            </div>
+            <div id="syncedEntries" class="p-5 overflow-y-auto space-y-2 break-words min-h-0"></div>
+        </div>
+    </div>
     <!-- 設定 Modal -->
     <div id="settingsModal" class="fixed inset-0 z-50 bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 border border-warm-200 dark:border-darkBorder fade-in space-y-6">
@@ -374,7 +384,7 @@
                 <section class="space-y-2" aria-labelledby="localStorageTitle">
                     <h4 id="localStorageTitle" class="font-semibold">操作日誌</h4>
                     <p class="text-xs text-warm-500">保留最近 100 筆操作結果，不保存日記內文與照片。清除日誌不影響日記或同步識別紀錄。</p>
-                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><div id="syncedEntries" class="space-y-2 break-words"></div>
+                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button>
                 </section>
                 <div class="space-y-2">
                     <label for="driveClientId" class="block font-semibold">Google Drive 設定</label>
@@ -460,7 +470,8 @@
                         ['manualModal', () => this.closeManualModal()],
                         ['editorModal', () => this.closeEditor()],
                         ['viewModal', () => this.closeViewModal()],
-                        ['settingsModal', () => this.closeSettings()]
+                        ['settingsModal', () => this.closeSettings()],
+                        ['operationLogModal', () => this.closeOperationLogs()]
                     ];
                     const visible = dialogs.filter(([id]) => !document.getElementById(id).classList.contains('hidden'));
                     if (!visible.length) return;
@@ -775,6 +786,8 @@
 
             parseMarkdownPost(folderName, text) {
                 text = text.replace(/\r\n?/g, '\n');
+                const journalId = text.match(/<!-- shiguang-id: ([A-Za-z0-9-]+) -->/)?.[1] || null;
+                text = text.replace(/<!-- shiguang-id: [A-Za-z0-9-]+ -->\n?/g, '');
                 let title = folderName.slice(11) || folderName;
                 let mood = 'happy';
                 let date = folderName.slice(0, 10);
@@ -823,7 +836,7 @@
                 let cleanExcerpt = rawContent.replace(/!\[.*?\]\(.*?\)/g, '').replace(/[#*`_>-]/g, '').trim();
 
                 return { 
-                    id: folderName, 
+                    id: folderName, journalId, 
                     title: title.replace(/[#*`_>-]/g, '').trim(), 
                     mood, 
                     date, 
@@ -1146,8 +1159,6 @@
                 }
 
                 const isNewLocal = !document.getElementById('editPostId').value;
-                const localQueueConfig = {...this.getDriveConfig()};
-                const localImages = {...this.stagedImages};
                 const oldFolder = document.getElementById('editOldFolder').value;
                 const oldYearFolder = document.getElementById('editOldYearFolder').value;
                 const title = document.getElementById('postTitle').value.trim();
@@ -1167,11 +1178,21 @@
                     return;
                 }
 
-                const yearStr = date.split('-')[0];
-                const newFolderName = `${date}-${title.replace(/[\/\\?%*:|"<>]/g, '')}`;
+                const originalPost = this.posts.find(p => p.id === document.getElementById('editPostId').value);
+                let journalId = originalPost?.journalId;
+                if (!journalId && originalPost) {
+                    try { const manifest = JSON.parse(await (await (await this.rootDirHandle.getFileHandle('.shiguang-sync.json')).getFile()).text());
+                        const path = [oldYearFolder, oldFolder].filter(Boolean).join('/');
+                        const pair = manifest.pairs?.find(p => p.path === path && !p.retired);
+                        if (pair?.noteId) journalId = 'drive-' + pair.noteId;
+                    } catch (error) {}
+                }
+                journalId ||= crypto.randomUUID();
+                const yearStr = originalPost ? (oldYearFolder || '') : date.split('-')[0];
+                const newFolderName = originalPost ? oldFolder : date + '-' + title.replace(/[\/\\?%*:|"<>]/g, '') + '-' + journalId.slice(0,8);
 
                 try {
-                    const yearDirHandle = await this.rootDirHandle.getDirectoryHandle(yearStr, { create: true });
+                    const yearDirHandle = yearStr ? await this.rootDirHandle.getDirectoryHandle(yearStr, { create: true }) : this.rootDirHandle;
                     const subDirHandle = await yearDirHandle.getDirectoryHandle(newFolderName, { create: true });
 
                     if (oldFolder && (oldFolder !== newFolderName || oldYearFolder !== yearStr)) {
@@ -1194,18 +1215,11 @@
 
                     const mdHandle = await subDirHandle.getFileHandle('note.md', { create: true });
                     const writableMd = await mdHandle.createWritable();
-                    const mdContent = `# ${title}\n\n- 日期：${date}\n- 心情：${moodObj.emoji} ${moodObj.name}\n- 心情ID：${moodId}\n- 分類：${catObj.name}\n- 分類ID：${categoryId}\n\n## 內文\n\n${content}\n`;
+                    const mdContent = `<!-- shiguang-id: ${journalId} -->\n# ${title}\n\n- 日期：${date}\n- 心情：${moodObj.emoji} ${moodObj.name}\n- 心情ID：${moodId}\n- 分類：${catObj.name}\n- 分類ID：${categoryId}\n\n## 內文\n\n${content}\n`;
                     await writableMd.write(mdContent);
                     await writableMd.close();
 
-                    if (isNewLocal && localQueueConfig.folderId) {
-                        try {
-                            const entry = {id:crypto.randomUUID(), rootId:localQueueConfig.folderId, clientId:localQueueConfig.clientId, title, date, content, mood:moodId, category:categoryId, images:Object.fromEntries(Object.entries(localImages).filter(([name]) => this.imagePaths(content).includes(name))), created:Date.now(), status:'pending'};
-                            await this.offlineStore('put', entry); await this.refreshOffline();
-                            this.showToast('已儲存本機並加入雲端待傳');
-                            this.syncOffline();
-                        } catch (error) { this.showToast('本機已儲存，但加入待傳失敗；請使用手動匯入：' + error.message, 'error'); }
-                    } else this.showToast(isNewLocal ? '已儲存本機；設定雲端資料夾後才能自動待傳' : '已成功儲存日記！');
+                    this.showToast('已儲存本機日記；不會自動建立雲端副本');
                     this.closeEditor();
                     await this.loadPostsFromFolder();
                 } catch (err) {
@@ -1367,6 +1381,18 @@
                 } catch (error) { document.getElementById('syncedEntries').textContent = '無法讀取操作日誌。'; }
             }
 
+            openOperationLogs() {
+                this.operationLogReturnFocus = document.activeElement;
+                this.renderOperationLogs();
+                document.getElementById('operationLogModal').classList.remove('hidden');
+                document.getElementById('closeOperationLogBtn').focus();
+            }
+
+            closeOperationLogs() {
+                document.getElementById('operationLogModal').classList.add('hidden');
+                this.operationLogReturnFocus?.focus();
+            }
+
             clearOperationLogs() {
                 if (!confirm('清除操作日誌？日記及同步識別紀錄會保留。')) return;
                 localStorage.removeItem('shiguang_operation_logs'); this.renderOperationLogs();
@@ -1374,7 +1400,7 @@
 
             async finishSyncedEntry(entry) {
                 this.recordOperation(entry.title, entry.target ? '修改並上傳' : '新增並上傳', '成功');
-                const compact = {id:entry.id,rootId:entry.rootId,clientId:entry.clientId,importKey:entry.importKey,title:entry.title,date:entry.date,created:entry.created,status:'synced',receipt:true,ids:entry.ids,target:entry.target ? {folderId:entry.target.folderId,noteId:entry.target.noteId} : undefined};
+                const compact = {id:entry.id,rootId:entry.rootId,clientId:entry.clientId,importKey:entry.importKey,journalId:entry.journalId,title:entry.title,date:entry.date,created:entry.created,status:'synced',receipt:true,ids:entry.ids,target:entry.target ? {folderId:entry.target.folderId,noteId:entry.target.noteId} : undefined};
                 await this.offlineStore('put', compact);
             }
 
@@ -1511,7 +1537,7 @@
                         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([sourceName, post.yearFolder, post.folderName, post.title, post.date, post.mood, post.category, post.content])));
                         const importKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2,'0')).join('');
                         if (entries.some(e => e.importKey === importKey && e.rootId === config.folderId && e.clientId === config.clientId)) continue;
-                        const entry = {id: crypto.randomUUID(), importKey, rootId:config.folderId, clientId:config.clientId, title:post.title, date:post.date, content:post.content, mood:post.mood, category:post.category || 'note', images, created:Date.now(), status:'pending'};
+                        const entry = {id: crypto.randomUUID(), journalId:post.journalId || crypto.randomUUID(), importKey, rootId:config.folderId, clientId:config.clientId, title:post.title, date:post.date, content:post.content, mood:post.mood, category:post.category || 'note', images, created:Date.now(), status:'pending'};
                         await this.offlineStore('put', entry); entries.push(entry); added++;
                     }
                     await this.refreshOffline();
@@ -1538,7 +1564,7 @@
                     const images = Object.fromEntries(Object.entries(this.stagedImages).filter(([name]) => referenced.has(name)));
                     const previous = this.offlineEditingId ? (await this.offlineStore('all')).find(e => e.id === this.offlineEditingId) : null;
                     if (this.offlineEditingId && (!previous || previous.ids || previous.status === 'synced')) throw new Error('日記已開始同步，請保留修改內容後重新查看');
-                    const entry = {...(previous || {}), id: previous?.id || crypto.randomUUID(), rootId: previous?.rootId || config.folderId, clientId: previous?.clientId || config.clientId, title, date, content, mood: value('postMood'), category: value('postCategory'), images, created: previous?.created || Date.now(), status: 'pending', error:''};
+                    const entry = {...(previous || {}), id: previous?.id || crypto.randomUUID(), journalId:previous?.journalId || previous?.id || crypto.randomUUID(), rootId: previous?.rootId || config.folderId, clientId: previous?.clientId || config.clientId, title, date, content, mood: value('postMood'), category: value('postCategory'), images, created: previous?.created || Date.now(), status: 'pending', error:''};
                     await this.offlineStore('put', entry);
                     navigator.storage?.persist?.().catch(() => {});
                     this.closeEditor(); await this.refreshOffline();
@@ -1598,7 +1624,7 @@
                                     await this.driveUpload(location.parent, location.name, blob, entry.ids.images[imageName]);
                                 }
                                 const mood = this.getMoodObj(entry.mood), category = this.getCategoryObj(entry.category);
-                                const markdown = `# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${mood.emoji} ${mood.name}\n- 心情ID：${entry.mood}\n- 分類：${category.name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
+                                const markdown = `<!-- shiguang-id: ${entry.journalId || entry.id} -->\n# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${mood.emoji} ${mood.name}\n- 心情ID：${entry.mood}\n- 分類：${category.name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
                                 await this.ensureOfflineFile(entry.ids.note, 'note.md', entry.ids.folder, 'text/markdown');
                                 await this.driveUpload(entry.ids.folder, 'note.md', new Blob([markdown], {type:'text/markdown'}), entry.ids.note);
                                 entry.status = 'synced'; entry.error = ''; await this.finishSyncedEntry(entry); changed = true;
@@ -1850,14 +1876,14 @@
                     const remoteImages=Object.fromEntries(Object.entries(post.driveImages||{}).filter(([name])=>refs.has(name)));
                     const cacheImages={};
                     for(const name of Object.keys(remoteImages)){if(post.imagesMap[name])cacheImages[name]=await(await fetch(post.imagesMap[name])).blob();}
-                    const entry={id:crypto.randomUUID(), rootId:this.driveRoot.id, clientId:config.clientId,title,date,content,mood:value('postMood'),category:value('postCategory'),images,remoteImages,cacheImages,created:Date.now(),status:'pending',target:{folderId:post.id,noteId:post.driveNote.id,version:this.driveEditVersion,folder:post.driveFolder,originalContent:post.content,originalImages:post.driveImages||{}}};
+                    const entry={id:crypto.randomUUID(), journalId:post.journalId || 'drive-' + post.driveNote.id, rootId:this.driveRoot.id, clientId:config.clientId,title,date,content,mood:value('postMood'),category:value('postCategory'),images,remoteImages,cacheImages,created:Date.now(),status:'pending',target:{folderId:post.id,noteId:post.driveNote.id,version:this.driveEditVersion,folder:post.driveFolder,originalContent:post.content,originalImages:post.driveImages||{}}};
                     await this.offlineStore('put',entry);this.closeEditor();await this.refreshOffline();this.showToast('修改已存於此裝置，將在背景同步');this.syncOffline();
                 }catch(error){this.showToast(error.message,'error');}finally{this.queueEditSaving=false;}
             }
 
             async applyQueuedEdit(entry) {
                 const target=entry.target;
-                const markdown=`# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${this.getMoodObj(entry.mood).emoji} ${this.getMoodObj(entry.mood).name}\n- 心情ID：${entry.mood}\n- 分類：${this.getCategoryObj(entry.category).name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
+                const markdown=`<!-- shiguang-id: ${entry.journalId || entry.id} -->\n# ${entry.title}\n\n- 日期：${entry.date}\n- 心情：${this.getMoodObj(entry.mood).emoji} ${this.getMoodObj(entry.mood).name}\n- 心情ID：${entry.mood}\n- 分類：${this.getCategoryObj(entry.category).name}\n- 分類ID：${entry.category}\n\n## 內文\n\n${entry.content}\n`;
                 const latest=await this.driveRequest('files/'+target.noteId+'?fields=modifiedTime,trashed&supportsAllDrives=true');
                 if(latest.trashed)throw new Error('雲端文章已刪除，修改副本仍保留');
                 let published=!!entry.published;
