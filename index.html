@@ -111,7 +111,7 @@
         .dark #dirBtn, .dark #driveBtn { background: #292524; color: #a8a29e; }
         .dark #dirBtn[data-connected="true"], .dark #driveBtn[data-connected="true"] { background: #d6c9bc; color: #292524; }
         #dirLabel { white-space: normal; overflow-wrap: anywhere; }
-            #newOfflineDiaryBtn:disabled, #uploadDiaryBtn:disabled { background: #e7e5e4; color: #a8a29e; border-color: #e7e5e4; cursor: not-allowed; box-shadow: none; }
+            #folderSyncBtn:disabled, #newOfflineDiaryBtn:disabled, #uploadDiaryBtn:disabled { background: #e7e5e4; color: #a8a29e; border-color: #e7e5e4; cursor: not-allowed; box-shadow: none; }
         .dark #newOfflineDiaryBtn:disabled, .dark #uploadDiaryBtn:disabled { background: #292524; color: #78716c; border-color: #44403c; }
     </style>
 </head>
@@ -159,7 +159,7 @@
             <button id="newOfflineDiaryBtn" onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
             <button id="uploadDiaryBtn" disabled onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
-            <button onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
+            <button id="folderSyncBtn" disabled onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
         </div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
@@ -247,7 +247,7 @@
                 </section>
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">3．筆電：本機與雲端同步</h4>
-                    <p>本機資料夾與 Google Drive 可同時連接，用「查看本機／查看雲端」切換。離線時可寫入本機；連網後先完成待傳上傳，再按「同步本機與雲端」比對文字與照片。<strong>雙向同步目前需手動按鈕啟動。</strong></p>
+                    <p>本機資料夾與 Google Drive 可同時連接，用「查看本機／查看雲端」切換。可在設定勾選「自動同步本機與雲端」（預設關閉），於儲存或恢復連線後背景比對；閱讀與編輯期間暫緩，舊日記配對、衝突與刪除請手動處理。離線時可寫入本機；連網後先完成待傳上傳，再按「同步本機與雲端」比對文字與照片。未啟用自動同步時，按按鈕執行手動同步。</p>
                     <p>單邊修改會更新另一邊；兩邊都修改時保留原資料並提示衝突。同步刪除逐篇確認，取消不刪除。請避免多台裝置同時修改同一篇。</p>
                     <p>「上傳日記」是單向複製本機日記至雲端，修改後再次匯入可能新增副本；更新已有對應的日記請用雙向同步。</p>
                 </section>
@@ -387,6 +387,13 @@
                     <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button>
                 </section>
                 <div class="space-y-2">
+                    <div class="space-y-2">
+                        <h4 class="font-semibold">本機資料夾</h4>
+                        <p id="localFolderSettingsName" class="text-xs break-words"></p>
+                        <p class="text-xs text-warm-500">只解除連線及記住的資料夾，不刪除日記檔案。</p>
+                    </div>
+                    <label class="flex items-center gap-2"><input id="folderSyncEnabled" type="checkbox" onchange="app.setFolderSyncEnabled(this.checked)"><span>自動同步本機與雲端</span></label>
+                    <p id="folderSyncHint" class="text-xs text-warm-500">預設關閉。開啟後，本機儲存、恢復網路或回到頁面時延遲同步。閱讀與編輯期間暫緩；衝突及刪除請手動處理。</p>
                     <label for="driveClientId" class="block font-semibold">Google Drive 設定</label>
                     <input id="driveClientId" placeholder="Google OAuth 用戶端 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs">
                     <input id="driveFolderUrl" placeholder="筆記根資料夾的 Google Drive 網址或 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs" aria-label="Google Drive 筆記資料夾網址">
@@ -395,7 +402,7 @@
                         <button onclick="app.saveDriveConfig()" class="px-3 py-2 rounded-lg bg-warm-200 dark:bg-stone-700">儲存設定</button>
                         <button onclick="app.connectDrive()" class="px-3 py-2 rounded-lg bg-warm-800 text-white">登入並連接</button>
                         <button onclick="app.refreshDrive()" class="px-3 py-2 rounded-lg border">重新讀取</button>
-                        <button onclick="app.disconnectDrive()" class="px-3 py-2 rounded-lg border">中斷連接</button>
+                        <button onclick="app.disconnectConnections()" class="px-3 py-2 rounded-lg border">中斷連線</button>
                     </div>
                 </div>
 
@@ -464,6 +471,8 @@
             }
 
             init() {
+                window.addEventListener('online', () => this.scheduleFolderAutoSync(true));
+                window.addEventListener('focus', () => this.scheduleFolderAutoSync());
                 document.addEventListener('keydown', event => {
                     if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return;
                     const dialogs = [
@@ -508,8 +517,10 @@
             }
 
             checkPlatform() {
+                this.updateFolderSyncUI();
                 this.updateOfflineButtons();
                 const localName = this.rootDirHandle?.name || this.localDirectoryName || '';
+                document.getElementById('localFolderSettingsName').textContent = localName || this.savedDirectory?.name || '未連接本機資料夾';
                 const folderButton = document.getElementById('dirBtn');
                 const driveButton = document.getElementById('driveBtn');
                 folderButton.dataset.connected = String(!!localName);
@@ -699,7 +710,7 @@
                 this.closeEditor();
                 this.closeViewModal();
                 this.checkPlatform();
-                
+                this.scheduleFolderAutoSync();
                 await this.loadPostsFromFolder();
                 document.getElementById('resumeDirectoryBtn').style.display = 'none';
             }
@@ -1222,6 +1233,7 @@
                     this.showToast('已儲存本機日記；不會自動建立雲端副本');
                     this.closeEditor();
                     await this.loadPostsFromFolder();
+                    this.scheduleFolderAutoSync(true);
                 } catch (err) {
                     console.error(err);
                     this.showToast('儲存失敗', 'error');
@@ -1418,7 +1430,53 @@
                 }); } finally { db.close(); }
             }
 
+            scheduleFolderAutoSync(force = false) {
+                if (!this.isFolderSyncEnabled()) return;
+                if (!force && Date.now() - (this.lastFolderAutoSync || 0) < 60000) return;
+                clearTimeout(this.folderAutoTimer);
+                this.folderAutoTimer = setTimeout(async () => {
+                    if (!this.isFolderSyncEnabled() || document.hidden) return;
+                    if (this.driveBusy || this.uploadBusy || ['editorModal','viewModal'].some(id=>!document.getElementById(id).classList.contains('hidden'))) {
+                        this.folderAutoTimer = setTimeout(() => this.scheduleFolderAutoSync(true), 15000); return;
+                    }
+                    this.lastFolderAutoSync = Date.now();
+                    await this.syncFolders(true);
+                }, 5000);
+            }
+
+            folderSyncKey() {
+                const config = this.getDriveConfig();
+                return this.rootDirHandle && config.folderId ? JSON.stringify([this.rootDirHandle.name, config.folderId, config.clientId]) : null;
+            }
+
+            isFolderSyncEnabled() {
+                try { return !!this.folderSyncKey() && localStorage.getItem('shiguang_folder_auto_sync') === this.folderSyncKey(); }
+                catch (error) { return false; }
+            }
+
+            setFolderSyncEnabled(enabled) {
+                if (this.folderSyncBusy || this.driveBusy) { this.showToast('操作進行中，請完成後再變更同步設定', 'error'); this.updateFolderSyncUI(); return; }
+                try {
+                    const key = this.folderSyncKey();
+                    if (enabled && !key) { this.showToast('請先選擇本機資料夾並儲存雲端筆記資料夾設定', 'error'); this.updateFolderSyncUI(); return; }
+                    if (enabled) localStorage.setItem('shiguang_folder_auto_sync', key);
+                    else localStorage.removeItem('shiguang_folder_auto_sync');
+                    this.updateFolderSyncUI();
+                    this.showToast(enabled ? '已啟用自動同步' : '已關閉自動同步，仍可手動同步');
+                    if (enabled) this.scheduleFolderAutoSync(true); else clearTimeout(this.folderAutoTimer);
+                } catch (error) { this.showToast('無法保存同步設定：' + error.message, 'error'); this.updateFolderSyncUI(); }
+            }
+
+            updateFolderSyncUI() {
+                const enabled = this.isFolderSyncEnabled();
+                document.getElementById('folderSyncEnabled').checked = enabled;
+                const button = document.getElementById('folderSyncBtn');
+                button.disabled = !this.rootDirHandle || !this.driveRoot || this.driveRoot.id !== this.getDriveConfig().folderId || !this.driveToken || Date.now() >= this.driveExpires || this.driveReadOnly || !navigator.onLine || this.driveBusy || this.folderSyncBusy;
+                button.title = '連接本機及原雲端資料夾後，手動同步';
+            }
+
             updateOfflineButtons() {
+                this.updateFolderSyncUI();
                 const connected = !!(this.rootDirHandle || this.localDirectoryName || (this.driveRoot && this.driveToken && Date.now() < this.driveExpires));
                 const add = document.getElementById('newOfflineDiaryBtn');
                 add.disabled = connected;
@@ -1707,7 +1765,7 @@
                     try { sessionStorage.setItem('shiguang_drive_session', JSON.stringify({token:this.driveToken, expires:this.driveExpires, clientId:config.clientId, folderId:config.folderId})); } catch (error) {}
                     this.sourceMode = this.rootDirHandle ? 'local' : 'drive'; this.readOnly = this.rootDirHandle ? false : this.driveReadOnly;
                     
-                    this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings();
+                    this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings(); this.scheduleFolderAutoSync();
                     this.showToast(`已連接 Google Drive，載入 ${posts.length} 篇日記`);
                 } catch (error) { this.showToast(error.message, 'error'); }
                 finally { this.driveBusy = false; }
@@ -1817,6 +1875,32 @@
                 this.releasePostImages(this.drivePosts); this.drivePosts = posts;
                 if (this.sourceMode === 'drive') { this.closeViewModal(); this.posts = posts; }
                 this.renderPosts(); this.updateStats();
+            }
+
+            async disconnectConnections() {
+                if (this.driveBusy || this.folderSyncBusy || this.importBusy || this.uploadBusy) return this.showToast('操作進行中，請完成後再中斷', 'error');
+                const disconnected = await this.disconnectDirectory();
+                if (!disconnected) return;
+                this.disconnectDrive();
+                this.showToast('已中斷本機與 Google Drive 連線；日記與待傳資料保留');
+            }
+
+            async disconnectDirectory() {
+                if (this.driveBusy || this.folderSyncBusy || this.importBusy || this.uploadBusy) return this.showToast('操作進行中，請完成後再中斷', 'error');
+                try { await this.directoryStore(null, true); }
+                catch (error) { return this.showToast('無法清除資料夾連線設定：' + error.message, 'error'); }
+                this.closeEditor(); this.closeViewModal();
+                this.releasePostImages(this.localPosts || []);
+                this.rootDirHandle = null; this.savedDirectory = null; this.localDirectoryName = ''; this.localPosts = [];
+                document.getElementById('directoryInput').value = '';
+                const resume = document.getElementById('resumeDirectoryBtn'); resume.hidden = true; resume.style.display = 'none';
+                if (this.sourceMode === 'local') {
+                    this.sourceMode = this.driveRoot ? 'drive' : 'local';
+                    this.posts = this.driveRoot ? this.drivePosts : [];
+                    this.readOnly = this.driveRoot ? this.driveReadOnly : typeof window.showDirectoryPicker !== 'function';
+                }
+                this.checkPlatform(); this.renderPosts(); this.updateStats();
+                return true;
             }
 
             disconnectDrive() {
@@ -2010,7 +2094,7 @@
                 const config = this.getDriveConfig();
                 document.getElementById('driveClientId').value = config.clientId || '';
                 document.getElementById('driveFolderUrl').value = config.folderId || '';
-                this.updateSettingsUI(); this.renderOperationLogs();
+                this.updateSettingsUI(); this.checkPlatform(); this.updateFolderSyncUI(); this.renderOperationLogs();
                 document.getElementById('settingsModal').classList.remove('hidden');
             }
 

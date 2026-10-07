@@ -1,9 +1,11 @@
 /* Explicit folder reconciliation: no automatic propagation of deletions. */
-BlogJournalApp.prototype.syncFolders = async function () {
-    if(navigator.locks)return navigator.locks.request('shiguang-offline-sync',{ifAvailable:true},lock=>lock?this.syncFoldersData():this.showToast('其他分頁正在同步，請稍後重試','error'));
+BlogJournalApp.prototype.syncFolders = async function (automatic = false) {
+    if(navigator.locks)return navigator.locks.request('shiguang-offline-sync',{ifAvailable:true},lock=>lock?this.syncFoldersData(automatic):this.showToast('其他分頁正在同步，請稍後重試','error'));
     return this.syncFoldersData();
 };
-BlogJournalApp.prototype.syncFoldersData = async function () {
+BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
+    if (automatic && (!this.isFolderSyncEnabled() || document.hidden || ['editorModal','viewModal'].some(id=>!document.getElementById(id).classList.contains('hidden')))) return;
+    if (automatic && (!this.rootDirHandle || !this.driveRoot || !navigator.onLine || !this.driveToken || Date.now() >= this.driveExpires || this.driveReadOnly || this.driveBusy)) return;
     if (this.folderSyncBusy || this.driveBusy) return this.showToast('目前同步進行中，請稍候', 'error');
     if (!this.rootDirHandle || !this.driveRoot || !navigator.onLine || this.driveReadOnly || Date.now() >= this.driveExpires) return this.showToast('請連接可寫入的本機資料夾與 Google Drive，並確認授權有效', 'error');
     if((await this.offlineStore('all')).some(e=>e.status!=='synced'&&e.rootId===this.driveRoot.id))return this.showToast('請先完成目前待傳日記，再執行本機雲端同步，避免重複匯入','error');
@@ -30,13 +32,29 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
         for(const name of new Set(this.imagePaths(parsed.content))) {
             if (/^(https?:|data:)/i.test(name)) continue;
             if (!post.driveImages[name]) throw Error('雲端照片缺失：'+name);
-            split(name);images[name]=await this.driveRequest('files/'+post.driveImages[name]+'?alt=media&supportsAllDrives=true',{},'blob');
+            split(name);
+            const imageId = post.driveImages[name];
+            const metadata = await this.driveRequest('files/'+imageId+'?fields=modifiedTime,md5Checksum,size,trashed&supportsAllDrives=true');
+            if (metadata.trashed) throw Error('雲端照片已刪除：'+name);
+            const stamp = metadata.md5Checksum || metadata.modifiedTime;
+            this.folderPhotoCache ||= new Map();
+            const key = imageId + ':' + stamp;
+            let blob = stamp ? this.folderPhotoCache.get(key) : null;
+            if (!blob) {
+                blob = await this.driveRequest('files/'+imageId+'?alt=media&supportsAllDrives=true',{},'blob');
+                if (stamp && blob.size <= 32 * 1024 * 1024) {
+                    const total = [...this.folderPhotoCache.values()].reduce((sum,b)=>sum+b.size,0);
+                    if (total + blob.size > 32 * 1024 * 1024) this.folderPhotoCache.clear();
+                    this.folderPhotoCache.set(key, blob);
+                }
+            }
+            images[name] = blob;
         }
         const version=await this.driveRequest('files/'+post.driveNote.id+'?fields=modifiedTime&supportsAllDrives=true');
         if(version.modifiedTime!==post.driveNote.modifiedTime)throw Error('雲端正在更新，請稍後重新同步');
         const snap={md,images,parsed,version:version.modifiedTime};snap.signature=await sign(snap);return snap;
     };
-    let manifest, remotePosts=[], summary={download:0,upload:0,conflict:0,deleted:0};
+    let manifest, remotePosts=[], summary={download:0,upload:0,conflict:0,deleted:0,deferred:0};
     const saveManifest = () => write(localRoot,'.shiguang-sync.json',JSON.stringify(manifest,null,2));
     const backup = async (path,snap) => {const dir=await directory('.shiguang-backups/'+Date.now()+'-'+crypto.randomUUID().slice(0,8),true);await write(dir,'原位置.txt',path);
         // Local rollback must retain attachments and unused photos as well as referenced images.
@@ -76,7 +94,7 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
     this.folderSyncBusy=true;this.driveBusy=true;
     try {
         if(await localRoot.queryPermission({mode:'readwrite'})!=='granted' && await localRoot.requestPermission({mode:'readwrite'})!=='granted')throw Error('未取得本機寫入權限');
-        this.closeEditor();this.closeViewModal();
+        if (!automatic) { this.closeEditor();this.closeViewModal(); }
         try {manifest=JSON.parse(await (await (await localRoot.getFileHandle('.shiguang-sync.json')).getFile()).text());}
         catch(error){if(error.name!=='NotFoundError')throw error;manifest={version:1,rootId:cloudRoot,pairs:[]};}
         if(manifest.version!==1||manifest.rootId!==cloudRoot||!Array.isArray(manifest.pairs))throw Error('此本機資料夾已對應另一個雲端目的地，請使用原設定');
@@ -91,6 +109,13 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
         remotePosts=await this.fetchDrivePosts(cloudRoot);
         const locals=new Map();for(const path of localPaths)locals.set(path,await localSnapshot(path));
         const remotes=new Map();for(const post of remotePosts)remotes.set(post.id,{post,snap:await remoteSnapshot(post)});
+        for (const snapshots of [[...locals.values()], [...remotes.values()].map(r=>r.snap)]) {
+            const ids = new Set();
+            for (const snap of snapshots) if (snap.parsed.journalId) {
+                if (ids.has(snap.parsed.journalId)) throw Error('有多篇日記使用相同識別碼，請手動確認後同步');
+                ids.add(snap.parsed.journalId);
+            }
+        }
         for(const pair of manifest.pairs){
             if(pair.retired)continue;
             const remote = remotes.get(pair.cloudId);
@@ -111,8 +136,10 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
                 else if(r){await download(pair.path,remote.snap,local);pair.base=remote.snap.signature;await saveManifest();}
             }else if(local&&!remote&&!pair.base){await upload(pair,local);
             }else if(!local&&remote&&pair.base){
+                if (automatic) { summary.deferred++; continue; }
                 if(confirm('本機已刪除「'+remote.snap.parsed.title+'」。是否將雲端文章與照片移至垃圾桶？')){await this.driveRequest('files/'+pair.cloudId+'?supportsAllDrives=true',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});pair.retired=true;await saveManifest();summary.deleted++;}
             }else if(local&&!remote&&pair.base){
+                if (automatic) { summary.deferred++; continue; }
                 let gone=false;try{const state=await this.driveRequest('files/'+pair.cloudId+'?fields=trashed&supportsAllDrives=true');gone=state.trashed===true;}catch(e){if(e.status===404)throw Error('雲端文章無法存取，未判定刪除');throw e;}
                 if(gone&&confirm('雲端已刪除「'+local.parsed.title+'」。是否備份後刪除本機文章？')){
                     const check=await localSnapshot(pair.path);if(check.signature!==local.signature)throw Error('本機已改變，未刪除');await backup(pair.path,local);
@@ -124,6 +151,7 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
         // Preserve divergent first-time matches without generating new copies.
         for(const [id,{post,snap}]of remotes){
             if(manifest.pairs.some(p=>p.cloudId===id))continue;
+            if (automatic && !snap.parsed.journalId) { summary.deferred++; for (const [path,l] of locals) if (!l.parsed.journalId) blockedLocalPaths.add(path); continue; }
             const matching=[...locals].filter(([path,l])=>(snap.parsed.journalId && l.parsed.journalId ? l.parsed.journalId===snap.parsed.journalId : l.signature===snap.signature)&&!manifest.pairs.some(p=>p.path===path));
             if (!matching.length) {
                 const sameDiary = [...locals].filter(([path,l]) => !(l.parsed.journalId && snap.parsed.journalId && l.parsed.journalId !== snap.parsed.journalId) && l.parsed.title === snap.parsed.title && l.parsed.date === snap.parsed.date);
@@ -145,8 +173,9 @@ BlogJournalApp.prototype.syncFoldersData = async function () {
             if (diverged) summary.conflict++;
             manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,journalId:snap.parsed.journalId || localMatch?.parsed.journalId,base:diverged ? null : snap.signature});await saveManifest();
         }
-        for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
-        this.recordOperation('本機與雲端', '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
+        for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;if (automatic && !snap.parsed.journalId) { summary.deferred++; continue; } const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
+        if (summary.deferred) this.showToast('部分日記需確認配對或刪除，請按「同步本機與雲端」手動處理', 'error');
+        this.recordOperation('本機與雲端', automatic ? '自動雙向同步' : '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
         this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
     } catch(error){this.recordOperation('本機與雲端','雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
     finally {
