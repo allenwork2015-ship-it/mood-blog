@@ -180,6 +180,6 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
     } catch(error){this.recordOperation('本機與雲端','雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
     finally {
         this.releasePostImages(remotePosts);this.folderSyncBusy=false;this.driveBusy=false;
-        try{if(this.sourceMode==='local')await this.loadPostsFromFolder();await this.reloadDrivePosts();}catch(e){this.showToast('請重新讀取列表：'+e.message,'error');}
+        try{if(summary.download || summary.deleted){if(this.sourceMode==='local')await this.loadPostsFromFolder();}if(summary.upload || summary.deleted)await this.reloadDrivePosts();}catch(e){this.showToast('請重新讀取列表：'+e.message,'error');}
     }
 };

@@ -506,7 +506,7 @@
             }
 
             showSource(mode) {
-                if (this.driveBusy && !this.offlineSyncing) return;
+                if (this.driveBusy && !this.offlineSyncing && !this.folderSyncBusy) return;
                 if (mode === 'local' && !this.rootDirHandle) return this.showToast('請先選擇本機資料夾', 'error');
                 if (mode === 'drive' && !this.driveRoot) return this.showToast('請先登入 Google Drive', 'error');
                 this.closeEditor(); this.closeViewModal();
@@ -1657,6 +1657,8 @@
                 if (this.offlineSyncing || this.driveBusy || !navigator.onLine || !this.driveRoot || this.driveReadOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
                 const perform = async () => {
                     if (this.offlineSyncing || this.driveBusy) return;
+                    const waiting = (await this.offlineStore('all')).some(e => e.status !== 'synced' && !e.conflict && e.id !== this.offlineEditingId && e.rootId === this.driveRoot?.id && e.clientId === this.getDriveConfig().clientId);
+                    if (!waiting || this.driveBusy || this.offlineSyncing) return;
                     this.offlineSyncing = true; this.driveBusy = true;
                     let changed = false;
                     try {
