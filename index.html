@@ -113,6 +113,10 @@
         #dirLabel { white-space: normal; overflow-wrap: anywhere; }
             #folderSyncBtn:disabled, #newOfflineDiaryBtn:disabled, #uploadDiaryBtn:disabled { background: #e7e5e4; color: #a8a29e; border-color: #e7e5e4; cursor: not-allowed; box-shadow: none; }
         .dark #newOfflineDiaryBtn:disabled, .dark #uploadDiaryBtn:disabled { background: #292524; color: #78716c; border-color: #44403c; }
+            #viewLocalSourceBtn, #viewDriveSourceBtn { background: #f2efeb; color: #685c50; }
+        #viewLocalSourceBtn[aria-pressed="true"], #viewDriveSourceBtn[aria-pressed="true"] { background: #68594b; color: #fff; border-color: #68594b; }
+        .dark #viewLocalSourceBtn, .dark #viewDriveSourceBtn { background: #292524; color: #a8a29e; }
+        .dark #viewLocalSourceBtn[aria-pressed="true"], .dark #viewDriveSourceBtn[aria-pressed="true"] { background: #d6c9bc; color: #292524; border-color: #d6c9bc; }
     </style>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
@@ -159,7 +163,7 @@
             <button id="newOfflineDiaryBtn" onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
             <button id="uploadDiaryBtn" disabled onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
-            <button id="folderSyncBtn" disabled onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
+            <button id="folderSyncBtn" disabled onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button id="viewLocalSourceBtn" aria-pressed="false" onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button id="viewDriveSourceBtn" aria-pressed="false" onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
         </div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
@@ -260,7 +264,7 @@
                 <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
                     <summary class="cursor-pointer font-semibold">設定與問題排查</summary>
                     <div class="mt-3 space-y-2">
-                        <p>更換雲端資料夾：齒輪 → Google Drive 設定 → 修改網址 → 儲存 → 登入。待傳日記仍綁定原資料夾。其他裝置更新後，到設定按「重新讀取」。</p>
+                        <p>更換雲端資料夾：齒輪 → Google Drive 設定 → 修改網址 → 儲存 → 登入。待傳日記仍綁定原資料夾。其他裝置更新後，到設定按「更新雲端列表」。</p>
                         <p>無法上傳時，檢查網路、Google 授權、資料夾編輯權限及待傳錯誤訊息。Google Drive 請由正式 HTTPS 網址使用。</p>
                         <p>雙向同步的對應紀錄為 .shiguang-sync.json，本機更新前的備份在 .shiguang-backups，請保留。</p>
                         <p><a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">部署與 Google Cloud 完整設定說明</a></p>
@@ -387,12 +391,7 @@
                     <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button>
                 </section>
                 <div class="space-y-2">
-                    <div class="space-y-2">
-                        <h4 class="font-semibold">本機資料夾</h4>
-                        <p id="localFolderSettingsName" class="text-xs break-words"></p>
-                        <p class="text-xs text-warm-500">只解除連線及記住的資料夾，不刪除日記檔案。</p>
-                    </div>
-                    <label class="flex items-center gap-2"><input id="folderSyncEnabled" type="checkbox" onchange="app.setFolderSyncEnabled(this.checked)"><span>自動同步本機與雲端</span></label>
+<label class="flex items-center gap-2"><input id="folderSyncEnabled" type="checkbox" onchange="app.setFolderSyncEnabled(this.checked)"><span>自動同步本機與雲端</span></label>
                     <p id="folderSyncHint" class="text-xs text-warm-500">預設關閉。開啟後，本機儲存、恢復網路或回到頁面時延遲同步。閱讀與編輯期間暫緩；衝突及刪除請手動處理。</p>
                     <label for="driveClientId" class="block font-semibold">Google Drive 設定</label>
                     <input id="driveClientId" placeholder="Google OAuth 用戶端 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs">
@@ -401,9 +400,10 @@
                     <div class="flex flex-wrap gap-2">
                         <button onclick="app.saveDriveConfig()" class="px-3 py-2 rounded-lg bg-warm-200 dark:bg-stone-700">儲存設定</button>
                         <button onclick="app.connectDrive()" class="px-3 py-2 rounded-lg bg-warm-800 text-white">登入並連接</button>
-                        <button onclick="app.refreshDrive()" class="px-3 py-2 rounded-lg border">重新讀取</button>
+                        <button onclick="app.refreshDrive()" class="px-3 py-2 rounded-lg border">更新雲端列表</button>
                         <button onclick="app.disconnectConnections()" class="px-3 py-2 rounded-lg border">中斷連線</button>
                     </div>
+                    <p class="text-xs text-warm-500">同時解除本機與 Google Drive 連線，不刪除日記。</p>
                 </div>
 
                 <div>
@@ -517,10 +517,12 @@
             }
 
             checkPlatform() {
+                const hasLocalSource = !!(this.rootDirHandle || this.localDirectoryName);
+                document.getElementById('viewLocalSourceBtn').setAttribute('aria-pressed', String(this.sourceMode === 'local' && hasLocalSource));
+                document.getElementById('viewDriveSourceBtn').setAttribute('aria-pressed', String(this.sourceMode === 'drive' && !!this.driveRoot));
                 this.updateFolderSyncUI();
                 this.updateOfflineButtons();
                 const localName = this.rootDirHandle?.name || this.localDirectoryName || '';
-                document.getElementById('localFolderSettingsName').textContent = localName || this.savedDirectory?.name || '未連接本機資料夾';
                 const folderButton = document.getElementById('dirBtn');
                 const driveButton = document.getElementById('driveBtn');
                 folderButton.dataset.connected = String(!!localName);
@@ -985,7 +987,7 @@
                                 this.renderPosts();
                             } catch (error) {
                                 post.coverFailed = true;
-                                this.showToast('部分封面載入失敗，可在設定中重新讀取', 'error');
+                                this.showToast('部分封面載入失敗，可在設定中按「更新雲端列表」', 'error');
                             } finally { post.coverPending = false; post.coverPromise = null; }
                         }
                     } finally { this.coverWorkers--; }
@@ -1865,7 +1867,7 @@
                 if (this.driveBusy) return;
                 if (!this.driveRoot) return this.showToast('請先連接 Google Drive', 'error');
                 this.driveBusy = true;
-                try { await this.reloadDrivePosts(); this.showToast('已重新讀取雲端日記'); }
+                try { await this.reloadDrivePosts(); this.showToast('已更新雲端日記列表'); }
                 catch (error) { this.showToast(error.message, 'error'); }
                 finally { this.driveBusy = false; }
             }
@@ -2025,7 +2027,7 @@
                     let folder = post?.driveFolder;
                     if (post) {
                         const latest = await this.driveRequest('files/' + post.driveNote.id + '?fields=modifiedTime&supportsAllDrives=true');
-                        if (latest.modifiedTime !== this.driveEditVersion) throw new Error('此文章已由其他裝置修改，請先保留內文並重新讀取');
+                        if (latest.modifiedTime !== this.driveEditVersion) throw new Error('此文章已由其他裝置修改，請先保留內文並更新雲端列表');
                     } else {
                         if (this.driveDraft && (this.driveDraft.name !== name || this.driveDraft.parents?.[0] !== year.id)) throw new Error('上次上傳未完成，請保持原標題與日期重試，或重新開啟編輯');
                         folder = this.driveDraft || await this.driveFolder(year.id, name);
@@ -2065,7 +2067,7 @@
                     this.closeEditor();
                     await this.reloadDrivePosts();
                     this.showToast(cleanupFailures ? `日記已儲存，但 ${cleanupFailures} 張照片未能移至垃圾桶；圖卡已依內文更新` : '已儲存至 Google Drive' + (removedImages.length ? '，移除的照片已移至垃圾桶' : ''), cleanupFailures ? 'error' : 'success');
-                } catch (error) { this.showToast((saved ? '已儲存，但重新讀取失敗：' : '儲存未全部完成，內文仍保留：') + error.message, 'error'); }
+                } catch (error) { this.showToast((saved ? '已儲存，但更新雲端列表失敗：' : '儲存未全部完成，內文仍保留：') + error.message, 'error'); }
                 finally { this.driveBusy = false; }
             }
 
