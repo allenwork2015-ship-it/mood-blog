@@ -253,7 +253,7 @@
                     <h4 class="font-bold text-sm">3．筆電：本機與雲端同步</h4>
                     <p>本機資料夾與 Google Drive 可同時連接，用「查看本機／查看雲端」切換。可在設定勾選「自動同步本機與雲端」（預設關閉），於儲存或恢復連線後背景比對；閱讀與編輯期間暫緩，舊日記配對、衝突與刪除請手動處理。離線時可寫入本機；連網後先完成待傳上傳，再按「同步本機與雲端」比對文字與照片。未啟用自動同步時，按按鈕執行手動同步。</p>
                     <p>單邊修改會更新另一邊；兩邊都修改時保留原資料並提示衝突。同步刪除逐篇確認，取消不刪除。請避免多台裝置同時修改同一篇。</p>
-                    <p>「上傳日記」是單向複製本機日記至雲端，修改後再次匯入可能新增副本；更新已有對應的日記請用雙向同步。</p>
+                    <p>「上傳日記」只處理此裝置已保存的待傳日記，不會重新匯入本機列表。本機日記新增與修改請透過雙向同步更新。</p>
                 </section>
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">4．閱讀與資料保存</h4>
@@ -1576,12 +1576,6 @@
                 const button = document.getElementById('uploadDiaryBtn');
                 button.disabled = true; button.textContent = '處理中…';
                 try {
-                    const config = this.getDriveConfig();
-                    const local = this.rootDirHandle ? [...this.localPosts] : this.sourceMode === 'local' ? [...this.posts] : [];
-                    if (local.length) {
-                        if (!config.folderId) { this.openSettings(); return this.showToast('請先設定 Google Drive 筆記資料夾', 'error'); }
-                        await this.importLocalToDrive(local, true);
-                    }
                     const pending = (await this.offlineStore('all')).filter(e => e.status !== 'synced');
                     if (!pending.length) return this.showToast('沒有待傳日記');
                     if (!navigator.onLine) return this.showToast('已保留待傳日記，連網且 Google 授權有效時會自動上傳');
@@ -1589,33 +1583,6 @@
                     await this.syncOffline(true);
                 } catch (error) { this.showToast('無法完成上傳：' + error.message + '；已保存的待傳日記仍保留', 'error'); }
                 finally { this.uploadBusy = false; button.textContent = '上傳日記'; this.updateOfflineButtons(); }
-            }
-
-            async importLocalToDrive(sourcePosts = this.posts, quiet = false) {
-                if (this.driveBusy || this.importBusy) return this.showToast('目前操作進行中，請稍候', 'error');
-                if (!sourcePosts.length) return this.showToast('請先選擇本機資料夾並載入日記', 'error');
-                const config = this.getDriveConfig();
-                if (!config.folderId) { this.openSettings(); return this.showToast('請先設定雲端筆記資料夾，再匯入本機日記', 'error'); }
-                this.importBusy = true;
-                let added = 0;
-                try {
-                    const entries = await this.offlineStore('all');
-                    const sourceName = this.rootDirHandle?.name || document.getElementById('dirLabel').textContent;
-                    for (const post of [...sourcePosts]) {
-                        const images = {};
-                        for (const path of new Set(this.imagePaths(post.content))) {
-                            if (post.imagesMap[path]) images[path] = await (await fetch(post.imagesMap[path])).blob();
-                        }
-                        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([sourceName, post.yearFolder, post.folderName, post.title, post.date, post.mood, post.category, post.content])));
-                        const importKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2,'0')).join('');
-                        if (entries.some(e => e.importKey === importKey && e.rootId === config.folderId && e.clientId === config.clientId)) continue;
-                        const entry = {id: crypto.randomUUID(), journalId:post.journalId || crypto.randomUUID(), importKey, rootId:config.folderId, clientId:config.clientId, title:post.title, date:post.date, content:post.content, mood:post.mood, category:post.category || 'note', images, created:Date.now(), status:'pending'};
-                        await this.offlineStore('put', entry); entries.push(entry); added++;
-                    }
-                    await this.refreshOffline();
-                    if (!quiet) this.showToast(`已加入 ${added} 篇待傳日記，本機原檔保留；請按 Google Drive 登入完成同步`);
-                } catch (error) { await this.refreshOffline(); this.showToast(`已加入 ${added} 篇，其餘匯入失敗：` + error.message, 'error'); }
-                finally { this.importBusy = false; }
             }
 
             async saveOffline() {
@@ -2017,7 +1984,7 @@
                 if(this.offlineSyncing)return this.showToast('請稍候同步結束','error');
                 const entry=(await this.offlineStore('all')).find(e=>e.id===id);
                 if(!entry?.conflict)return;
-                entry.title+='（本機修改副本）';entry.originalTarget=entry.target;delete entry.target;delete entry.ids;entry.error='';entry.conflict=false;
+                entry.journalId=crypto.randomUUID();entry.title+='（本機修改副本）';entry.originalTarget=entry.target;delete entry.target;delete entry.ids;entry.error='';entry.conflict=false;
                 await this.offlineStore('put',entry);await this.refreshOffline();this.syncOffline();
             }
 
