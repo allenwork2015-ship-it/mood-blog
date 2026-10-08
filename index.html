@@ -396,7 +396,7 @@
                     <label for="driveClientId" class="block font-semibold">Google Drive 設定</label>
                     <input id="driveClientId" placeholder="Google OAuth 用戶端 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs">
                     <input id="driveFolderUrl" placeholder="筆記根資料夾的 Google Drive 網址或 ID" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900 text-xs" aria-label="Google Drive 筆記資料夾網址">
-                    <p class="text-xs text-warm-500">設定儲存在此瀏覽器。首次使用請依隨附設定說明建立 Google 授權。連接後可讀寫指定目錄，刪除會移至 Google Drive 垃圾桶。</p>
+                    <p class="text-xs text-warm-500">設定只存於此瀏覽器。填入筆記資料夾後登入；需有編輯權限，刪除會移至雲端垃圾桶。</p>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="app.saveDriveConfig()" class="px-3 py-2 rounded-lg bg-warm-200 dark:bg-stone-700">儲存設定</button>
                         <button onclick="app.connectDrive()" class="px-3 py-2 rounded-lg bg-warm-800 text-white">登入並連接</button>
@@ -520,7 +520,6 @@
                 const hasLocalSource = !!(this.rootDirHandle || this.localDirectoryName);
                 document.getElementById('viewLocalSourceBtn').setAttribute('aria-pressed', String(this.sourceMode === 'local' && hasLocalSource));
                 document.getElementById('viewDriveSourceBtn').setAttribute('aria-pressed', String(this.sourceMode === 'drive' && !!this.driveRoot));
-                this.updateFolderSyncUI();
                 this.updateOfflineButtons();
                 const localName = this.rootDirHandle?.name || this.localDirectoryName || '';
                 const folderButton = document.getElementById('dirBtn');
@@ -1171,7 +1170,6 @@
                     return;
                 }
 
-                const isNewLocal = !document.getElementById('editPostId').value;
                 const oldFolder = document.getElementById('editOldFolder').value;
                 const oldYearFolder = document.getElementById('editOldYearFolder').value;
                 const title = document.getElementById('postTitle').value.trim();
@@ -1761,6 +1759,18 @@
             }
 
             async driveRequest(path, options = {}, format = 'json', upload = false) {
+                const shared = !upload && (!options.method || options.method === 'GET') && !options.signal && !options.headers && !options.body;
+                if (!shared) return this.driveRequestRaw(path, options, format, upload);
+                this.driveReadRequests ||= new Map();
+                const key = JSON.stringify([this.driveToken, path, format]);
+                if (this.driveReadRequests.has(key)) return this.driveReadRequests.get(key);
+                const request = this.driveRequestRaw(path, options, format, upload);
+                this.driveReadRequests.set(key, request);
+                try { return await request; }
+                finally { if (this.driveReadRequests.get(key) === request) this.driveReadRequests.delete(key); }
+            }
+
+            async driveRequestRaw(path, options = {}, format = 'json', upload = false) {
                 if (!this.driveToken || Date.now() >= this.driveExpires) throw new Error('Google 授權已過期，請按 Google Drive 重新登入；未儲存內文仍保留');
                 const controller = new AbortController();
                 const relay = () => controller.abort();
@@ -1806,6 +1816,7 @@
 
             async fetchDrivePosts(rootId) {
                 const posts = [];
+                let textCacheHits = 0;
                 const folderType = 'application/vnd.google-apps.folder';
                 const addPost = async (folder, yearFolder) => {
                     const entries = await this.driveChildren(folder.id);
@@ -1813,7 +1824,17 @@
                     if (!notes.length) return;
                     if (notes.length > 1) throw new Error(folder.name + ' 含有重複 note.md，請先整理');
                     const note = notes[0];
-                    const text = await this.driveRequest('files/' + note.id + '?alt=media&supportsAllDrives=true', {}, 'text');
+                    this.driveTextCache ||= new Map();
+                    const cacheKey = JSON.stringify([rootId, this.driveToken, note.id, note.modifiedTime]);
+                    let text = note.modifiedTime ? this.driveTextCache.get(cacheKey) : undefined;
+                    if (text !== undefined) textCacheHits++;
+                    else {
+                        text = await this.driveRequest('files/' + note.id + '?alt=media&supportsAllDrives=true', {}, 'text');
+                        if (note.modifiedTime && text.length <= 1024 * 1024) {
+                            while (this.driveTextCache.size >= 128 || [...this.driveTextCache.values()].reduce((sum,value)=>sum+value.length,0) + text.length > 2 * 1024 * 1024) this.driveTextCache.delete(this.driveTextCache.keys().next().value);
+                            this.driveTextCache.set(cacheKey, text);
+                        }
+                    }
                     const post = this.parseMarkdownPost(folder.name, text);
                     Object.assign(post, {id: folder.id, folderName: folder.name, yearFolder, driveFolder: folder, driveNote: note, imagesMap: {}, driveImages: {}});
                     posts.push(post);
@@ -1836,12 +1857,21 @@
                 const started = performance.now();
                 try {
                     const jobs = [];
-                    for (const folder of await this.driveChildren(rootId)) {
-                        if (folder.mimeType !== folderType) continue;
-                        if (/^\d{4}$/.test(folder.name)) {
-                            for (const child of await this.driveChildren(folder.id)) if (child.mimeType === folderType) jobs.push({folder: child, year: folder.name});
-                        } else jobs.push({folder, year: null});
-                    }
+                    const folders = (await this.driveChildren(rootId)).filter(folder => folder.mimeType === folderType);
+                    let folderCursor = 0;
+                    let discoveryError = null;
+                    const discover = async () => {
+                        while (!discoveryError && folderCursor < folders.length) {
+                            const folder = folders[folderCursor++];
+                            try {
+                                if (/^\d{4}$/.test(folder.name)) {
+                                    for (const child of await this.driveChildren(folder.id)) if (child.mimeType === folderType) jobs.push({folder:child, year:folder.name});
+                                } else jobs.push({folder, year:null});
+                            } catch (error) { discoveryError = error; }
+                        }
+                    };
+                    await Promise.all(Array.from({length:Math.min(4,folders.length)}, discover));
+                    if (discoveryError) throw discoveryError;
                     let cursor = 0;
                     let failure = null;
                     const worker = async () => {
@@ -1854,7 +1884,7 @@
                     // Wait for every active worker before cleaning up object URLs on failure.
                     await Promise.all(Array.from({length: Math.min(4, jobs.length)}, worker));
                     if (failure) throw failure;
-                    this.driveLoadStats = {posts: posts.length, images: posts.reduce((count, post) => count + Object.keys(post.imagesMap).length, 0), milliseconds: Math.round(performance.now() - started)};
+                    this.driveLoadStats = {textCacheHits, posts: posts.length, images: posts.reduce((count, post) => count + Object.keys(post.imagesMap).length, 0), milliseconds: Math.round(performance.now() - started)};
                     return posts.sort((a, b) => new Date(b.date) - new Date(a.date));
                 } catch (error) { this.releasePostImages(posts); throw error; }
             }
@@ -1905,6 +1935,7 @@
                 if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候', 'error');
                 this.clearDriveSession();
                 if (this.driveToken && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(this.driveToken, () => {});
+                this.driveTextCache?.clear(); this.folderPhotoCache?.clear();
                 this.driveToken = null; this.driveExpires = 0; this.driveRoot = null; this.driveReadOnly = true; this.releasePostImages(this.drivePosts); this.drivePosts = [];
                 if (this.sourceMode === 'drive') {
                     this.closeEditor(); this.closeViewModal(); this.releasePostImages(); this.posts = [];
@@ -2003,70 +2034,6 @@
                 await this.offlineStore('put',entry);await this.refreshOffline();this.syncOffline();
             }
 
-            async saveDrivePost() {
-                if (this.driveBusy) return;
-                const value = id => document.getElementById(id).value;
-                const title = value('postTitle').trim(), date = value('postDate'), content = value('postContent').trim();
-                if (!title || !content || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return this.showToast('請填寫標題、日期及內文', 'error');
-                const post = this.posts.find(item => item.id === value('editPostId'));
-                if (value('editPostId') && !post) return this.showToast('文章資料已更新，請重新開啟編輯', 'error');
-                const referencedImages = new Set(this.imagePaths(content));
-                const removedImages = post ? [...new Set(this.imagePaths(post.content))]
-                    .filter(path => !referencedImages.has(path) && post.driveImages?.[path])
-                    .map(path => ({path, id: post.driveImages[path]})) : [];
-                this.driveBusy = true; let saved = false;
-                try {
-                    const year = await this.driveFolder(this.driveRoot.id, date.slice(0,4));
-                    const name = date + '-' + title.replace(/[\/\\?%*:|"<>]/g, '');
-                    const siblings = await this.driveChildren(year.id);
-                    if (siblings.some(file => file.name === name && file.id !== post?.id && file.id !== this.driveDraft?.id)) throw new Error('已有同名文章，請更改標題或日期');
-                    let folder = post?.driveFolder;
-                    if (post) {
-                        const latest = await this.driveRequest('files/' + post.driveNote.id + '?fields=modifiedTime&supportsAllDrives=true');
-                        if (latest.modifiedTime !== this.driveEditVersion) throw new Error('此文章已由其他裝置修改，請先保留內文並更新雲端列表');
-                    } else {
-                        if (this.driveDraft && (this.driveDraft.name !== name || this.driveDraft.parents?.[0] !== year.id)) throw new Error('上次上傳未完成，請保持原標題與日期重試，或重新開啟編輯');
-                        folder = this.driveDraft || await this.driveFolder(year.id, name);
-                        this.driveDraft = folder;
-                    }
-                    // Upload photographs before publishing Markdown so it never references a failed upload.
-                    const children = await this.driveChildren(folder.id);
-                    for (const [imageName, image] of Object.entries(this.stagedImages)) {
-                        if (!referencedImages.has(imageName)) continue;
-                        const matches = children.filter(file => file.name === imageName);
-                        if (matches.length > 1) throw new Error('圖片檔名重複：' + imageName);
-                        await this.driveUpload(folder.id, imageName, image, matches[0]?.id);
-                    }
-                    const mood = value('postMood'), category = value('postCategory');
-                    const markdown = `# ${title}\n\n- 日期：${date}\n- 心情：${this.getMoodObj(mood).emoji} ${this.getMoodObj(mood).name}\n- 心情ID：${mood}\n- 分類：${this.getCategoryObj(category).name}\n- 分類ID：${category}\n\n## 內文\n\n${content}\n`;
-                    const note = await this.driveUpload(folder.id, 'note.md', new Blob([markdown], {type:'text/markdown'}), post?.driveNote.id || this.driveDraft?.noteId);
-                    if (post) { post.driveNote.modifiedTime = note.modifiedTime; this.driveEditVersion = note.modifiedTime; }
-                    else this.driveDraft.noteId = note.id;
-                    // Keep the existing folder and images when changing the title or year.
-                    if (post && (folder.name !== name || folder.parents?.[0] !== year.id)) {
-                        const query = new URLSearchParams({supportsAllDrives:'true'});
-                        if (folder.parents?.[0] !== year.id) { query.set('addParents',year.id); query.set('removeParents',(folder.parents || []).join(',')); }
-                        await this.driveRequest('files/' + folder.id + '?' + query, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
-                    }
-                    saved = true;
-                    let cleanupFailures = 0;
-                    for (const image of removedImages) {
-                        try {
-                            await this.driveRequest('files/' + image.id + '?supportsAllDrives=true', {
-                                method: 'PATCH', headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({trashed: true})
-                            });
-                        } catch (error) { cleanupFailures++; console.warn('照片移至垃圾桶失敗', image.path, error); }
-                    }
-                    this.driveDraft = null;
-                    if (post) post.driveNote.modifiedTime = note.modifiedTime;
-                    this.closeEditor();
-                    await this.reloadDrivePosts();
-                    this.showToast(cleanupFailures ? `日記已儲存，但 ${cleanupFailures} 張照片未能移至垃圾桶；圖卡已依內文更新` : '已儲存至 Google Drive' + (removedImages.length ? '，移除的照片已移至垃圾桶' : ''), cleanupFailures ? 'error' : 'success');
-                } catch (error) { this.showToast((saved ? '已儲存，但更新雲端列表失敗：' : '儲存未全部完成，內文仍保留：') + error.message, 'error'); }
-                finally { this.driveBusy = false; }
-            }
-
             async deleteDrivePost(postId) {
                 if (this.driveBusy) return;
                 const post = this.posts.find(item => item.id === postId);
@@ -2092,7 +2059,7 @@
                 const config = this.getDriveConfig();
                 document.getElementById('driveClientId').value = config.clientId || '';
                 document.getElementById('driveFolderUrl').value = config.folderId || '';
-                this.updateSettingsUI(); this.checkPlatform(); this.updateFolderSyncUI(); this.renderOperationLogs();
+                this.updateSettingsUI(); this.checkPlatform(); this.renderOperationLogs();
                 document.getElementById('settingsModal').classList.remove('hidden');
             }
 
