@@ -1553,7 +1553,7 @@
                     this.pendingOfflineCount = pending; this.updateOfflineButtons();
                     document.getElementById('offlineStatus').textContent = (navigator.onLine ? '已連網' : '離線') + `・${pending} 篇待同步` + (this.offlineSyncing ? '・同步中' : '') + (this.offlineShellReady ? '・離線網站已就緒' : '・離線網站尚未就緒');
                     const renderEntry = e => {
-                        const photos = Object.entries(e.images).map(([name, blob]) => {
+                        const photos = Object.entries({...e.cacheImages,...e.images}).map(([name, blob]) => {
                             const url = URL.createObjectURL(blob); this.offlinePreviewUrls.push(url);
                             return `<img src="${url}" alt="${escapeHtml(name)}" class="max-h-48 rounded-lg my-2">`;
                         }).join('');
@@ -1790,7 +1790,13 @@
                     return await (format === 'text' ? response.text() : format === 'blob' ? response.blob() : response.json());
                 } catch (error) {
                     if (error.name === 'AbortError') throw new Error('Google Drive 回應逾時或已取消，請確認網路後重試；待傳資料仍保留');
-                    throw error;
+                    const method=options.method || 'GET';
+                    const stage=upload ? '上傳檔案內容' : path.startsWith('files/generateIds') ? '建立上傳識別碼' : method==='GET' ? (path.includes('alt=media') ? '讀取雲端內容' : '讀取雲端檔案資訊') : method==='POST' ? '建立雲端檔案或資料夾' : '更新雲端檔案資訊';
+                    const message=error.message || '未知錯誤';
+                    const detail=message==='Load failed' || message==='Failed to fetch' ? '連線請求未完成，瀏覽器未提供原因' : message;
+                    const diagnostic=new Error(stage+'失敗：'+detail+'；待傳修改仍保留');
+                    diagnostic.status=error.status;
+                    throw diagnostic;
                 } finally { clearTimeout(timeout); options.signal?.removeEventListener('abort', relay); }
             }
 
@@ -1988,7 +1994,16 @@
                     const images=Object.fromEntries(Object.entries(this.stagedImages).filter(([name])=>refs.has(name)));
                     const remoteImages=Object.fromEntries(Object.entries(post.driveImages||{}).filter(([name])=>refs.has(name)));
                     const cacheImages={};
-                    for(const name of Object.keys(remoteImages)){if(post.imagesMap[name])cacheImages[name]=await(await fetch(post.imagesMap[name])).blob();}
+                    // Photo previews are optional: a stale Blob URL must not block saving text.
+                    for(const name of Object.keys(remoteImages)){
+                        if(!post.imagesMap[name])continue;
+                        try{
+                            const response=await fetch(post.imagesMap[name]);
+                            if(!response.ok)continue;
+                            const blob=await response.blob();
+                            if(blob.size)cacheImages[name]=blob;
+                        }catch(error){ /* Keep the remote reference and save the edit. */ }
+                    }
                     const entry={id:crypto.randomUUID(), journalId:post.journalId || 'drive-' + post.driveNote.id, rootId:this.driveRoot.id, clientId:config.clientId,title,date,content,mood:value('postMood'),category:value('postCategory'),images,remoteImages,cacheImages,created:Date.now(),status:'pending',target:{folderId:post.id,noteId:post.driveNote.id,version:this.driveEditVersion,folder:post.driveFolder,originalContent:post.content,originalImages:post.driveImages||{}}};
                     await this.offlineStore('put',entry);this.closeEditor();await this.refreshOffline();this.showToast('修改已存於此裝置，將在背景同步');this.syncOffline();
                 }catch(error){this.showToast(error.message,'error');}finally{this.queueEditSaving=false;}
