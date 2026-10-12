@@ -1,0 +1,51 @@
+        @keyframes enhancedSunFlare {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+            50% { transform: scale(1.25) rotate(180deg); opacity: 1; }
+            100% { transform: scale(1) rotate(360deg); opacity: 0.7; }
+        }
+        .enhanced-sun-flare {
+            animation: enhancedSunFlare 8s linear infinite;
+        }
+        @keyframes flashLightning {
+            0%, 75%, 85%, 92%, 100% { opacity: 0; }
+            78%, 88%, 95% { opacity: 0.95; background-color: rgba(255, 255, 255, 0.98); }
+            80%, 90% { opacity: 0.15; }
+        }
+        .lightning-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.03s ease;
+        }
+        .lightning-active {
+            animation: flashLightning 0.5s ease-in-out;
+        }
+        /* 漸進式積雪底座動畫 */
+        .snow-drift-ground {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0px;
+            pointer-events: none;
+            z-index: 20;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.85));
+            border-top-left-radius: 50% 15px;
+            border-top-right-radius: 50% 15px;
+            box-shadow: 0 -4px 20px rgba(255, 255, 255, 0.6);
+            transition: height 0.5s ease-out;
+        }
+        .dark .snow-drift-ground {
+            background: linear-gradient(to top, rgba(226, 232, 240, 0.95), rgba(148, 163, 184, 0.8));
+            box-shadow: 0 -4px 20px rgba(226, 232, 240, 0.3);
+        }
+
+body { isolation: isolate; }
+#weatherLayer { position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden; }
+#weatherLayer[hidden] { display:none; }
+#weatherLayer #dynamicBgCanvas,#weatherLayer #celestialObjects,#weatherLayer #lightningOverlay { z-index:0;pointer-events:none; }
+#weatherLayer #dynamicBgCanvas { position:fixed;inset:0;width:100%;height:100%; }
+#weatherLayer #snowDriftGround { z-index:1; }
+@media(prefers-reduced-motion:reduce) { #weatherLayer * { animation:none!important; } }

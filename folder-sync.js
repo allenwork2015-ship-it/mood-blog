@@ -1,7 +1,7 @@
 /* Explicit folder reconciliation: no automatic propagation of deletions. */
 BlogJournalApp.prototype.syncFolders = async function (automatic = false) {
-    if(navigator.locks)return navigator.locks.request('shiguang-offline-sync',{ifAvailable:true},lock=>lock?this.syncFoldersData(automatic):this.showToast('其他分頁正在同步，請稍後重試','error'));
-    return this.syncFoldersData();
+    if(navigator.locks)return navigator.locks.request('shiguang-offline-sync',{ifAvailable:true},lock=>lock?this.syncFoldersData(automatic):(automatic ? undefined : this.showToast('其他分頁正在同步，請稍後重試','error')));
+    return this.syncFoldersData(automatic);
 };
 BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
     if (automatic && (!this.isFolderSyncEnabled() || document.hidden || ['editorModal','viewModal'].some(id=>!document.getElementById(id).classList.contains('hidden')))) return;
@@ -176,8 +176,8 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
         for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;if (automatic && !snap.parsed.journalId) { summary.deferred++; continue; } const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
         if (summary.deferred) this.showToast('部分日記需確認配對或刪除，請按「同步本機與雲端」手動處理', 'error');
         this.recordOperation('本機與雲端', automatic ? '自動雙向同步' : '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
-        this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
-    } catch(error){this.recordOperation('本機與雲端','雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
+        if (!automatic || summary.conflict) this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
+    } catch(error){this.recordOperation('本機與雲端',automatic ? '自動雙向同步' : '雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
     finally {
         this.releasePostImages(remotePosts);this.folderSyncBusy=false;this.driveBusy=false;
         try{if(summary.download || summary.deleted){if(this.sourceMode==='local')await this.loadPostsFromFolder();}if(summary.upload || summary.deleted)await this.reloadDrivePosts();}catch(e){this.showToast('請重新讀取列表：'+e.message,'error');}

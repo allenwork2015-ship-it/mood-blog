@@ -118,12 +118,14 @@
         .dark #viewLocalSourceBtn, .dark #viewDriveSourceBtn { background: #292524; color: #a8a29e; }
         .dark #viewLocalSourceBtn[aria-pressed="true"], .dark #viewDriveSourceBtn[aria-pressed="true"] { background: #d6c9bc; color: #292524; border-color: #d6c9bc; }
     </style>
+<link rel="stylesheet" href="./weather.css">
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
 
     <input type="file" id="directoryInput" webkitdirectory multiple hidden onchange="app.loadPostsFromFiles(event)">
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="weatherLayer" hidden aria-hidden="true"><canvas id="dynamicBgCanvas"></canvas><div id="celestialObjects" class="fixed inset-0 pointer-events-none overflow-hidden"></div><div id="lightningOverlay" class="lightning-overlay"></div><div id="snowDriftGround" class="snow-drift-ground"></div></div>
     <header class="sticky top-0 z-30 backdrop-blur-md bg-warm-50/85 dark:bg-darkBg/85 border-b border-warm-200 dark:border-darkBorder shadow-sm">
         <div class="journal-header-layout max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
             <div class="journal-header-brand flex items-center space-x-2.5 cursor-pointer" onclick="app.switchHome()">
@@ -415,6 +417,13 @@
                     </div>
                 </div>
 
+                <div>
+                    <label for="weatherScene" class="block font-semibold mb-2">動態天象</label>
+                    <select id="weatherScene" onchange="app.setWeatherMode(this.value)" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900"><option value="off">關閉</option><option value="auto">自動（日夜與已取得的天氣）</option><option value="sunny_day">白天晴朗</option><option value="sunny_night">黑夜星空、月相與彗星</option><option value="drizzle_day">白天毛毛雨</option><option value="drizzle_night">黑夜毛毛雨</option><option value="storm_day">白天雷雨</option><option value="storm_night">黑夜雷雨</option><option value="snow_day">白天下雪與積雪</option><option value="snow_night">黑夜下雪與積雪</option></select>
+                    <p id="weatherStatusText" class="text-xs mt-2" role="status">動態天象已關閉</p>
+                    <button onclick="app.fetchWeatherLocation()" class="border rounded-full px-3 py-2 text-xs mt-2">取得所在地天氣</button>
+                    <p id="weatherLocationHint" class="text-xs mt-2 text-warm-500">點選後才要求定位並向 Open-Meteo 查詢天氣；不影響日記與雲端連線。動畫遵循減少動態效果設定。</p>
+                </div>
                 <div>
                     <label class="block text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">文章列表檢視</label>
                     <div class="grid grid-cols-2 gap-2">
@@ -1421,109 +1430,18 @@
                 await this.offlineStore('put', compact);
             }
 
-            async packOfflinePhotos(entry) {
-                const packed={...entry};
-                for(const field of ['images','cacheImages']) {
-                    if(!entry[field])continue;
-                    packed[field]={};
-                    for(const [name,photo] of Object.entries(entry[field])) {
-                        if(photo?.shiguangBytes===1){packed[field][name]=photo;continue;}
-                        try {
-                            const bytes=await photo.arrayBuffer();
-                            packed[field][name]={shiguangBytes:1,type:photo.type,bytes};
-                        } catch(error) {
-                            // Preserve unreadable legacy photos until the user replaces them.
-                            packed[field][name]=photo;
-                        }
-                    }
-                }
-                return packed;
-            }
-
-            unpackOfflinePhotos(entry) {
-                for(const field of ['images','cacheImages']) {
-                    if(!entry[field])continue;
-                    entry[field]=Object.fromEntries(Object.entries(entry[field]).map(([name,photo])=>[name,photo?.shiguangBytes===1 ? new Blob([photo.bytes],{type:photo.type || 'application/octet-stream'}) : photo]));
-                }
-                return entry;
-            }
-
             async offlineStore(action, value) {
-                // Complete asynchronous byte reads before opening an IndexedDB transaction.
-                const stored=action==='put' ? await this.packOfflinePhotos(value) : value;
                 const db = await new Promise((resolve, reject) => {
                     const r = indexedDB.open('shiguang_offline', 1);
                     r.onupgradeneeded = () => r.result.createObjectStore('entries', {keyPath: 'id'});
                     r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
                 });
-                try {
-                    const result=await new Promise((resolve, reject) => {
-                        const tx=db.transaction('entries',action==='all'?'readonly':'readwrite');
-                        const store=tx.objectStore('entries');
-                        const r=action==='all'?store.getAll():action==='put'?store.put(stored):store.delete(stored);
-                        tx.oncomplete=()=>resolve(r.result);
-                        tx.onabort=tx.onerror=()=>reject(tx.error || new Error('本機儲存失敗'));
-                    });
-                    return action==='all'?result.map(entry=>this.unpackOfflinePhotos(entry)):result;
-                } finally {db.close();}
-            }
-
-            async validateQueuedPhotos(entry) {
-                const failed=[];
-                for(const [name,photo] of Object.entries(entry.images || {})) {
-                    try {
-                        const bytes=await photo.arrayBuffer();
-                        if(!bytes.byteLength || bytes.byteLength!==photo.size)throw new Error('照片資料不完整');
-                        entry.images[name]=new Blob([bytes],{type:photo.type || 'application/octet-stream'});
-                    } catch(error) {failed.push(name);}
-                }
-                entry.photoErrors=failed;
-                if(failed.length)throw new Error('本機照片資料無法讀取：'+failed.join('、')+'；請在待傳區重新選取對應照片。日記文字仍保留');
-            }
-
-            async replaceQueuedPhoto(id,index,input) {
-                const file=input.files?.[0];input.value='';
-                if(!file)return;
-                if(file.size>10*1024*1024 || !file.type.startsWith('image/'))return this.showToast('請選取 10 MB 以下的圖片','error');
-                const perform=async()=>{
-                    if(this.offlineSyncing || this.driveBusy || this.repairBusy)return this.showToast('請等同步結束後再選取照片','error');
-                    this.repairBusy=true;
-                    try{
-                        const entry=(await this.offlineStore('all')).find(e=>e.id===id && e.status!=='synced');
-                        if(!entry)throw new Error('待傳日記已更新，請重新查看');
-                        const name=Object.keys(entry.images || {})[index];
-                        if(!name)throw new Error('找不到原照片');
-                        const bytes=await file.arrayBuffer();
-                        if(!bytes.byteLength)throw new Error('選取的照片沒有內容');
-                        // Keep the existing path and Drive ID to avoid duplicate uploads.
-                        entry.images[name]=new Blob([bytes],{type:file.type});
-                        if(entry.cacheImages?.[name])entry.cacheImages[name]=entry.images[name];
-                        entry.photoErrors=(entry.photoErrors || []).filter(n=>n!==name);
-                        entry.error='';
-                        await this.offlineStore('put',entry);
-                        const post=this.localQueuePosts?.get('offline-'+id);
-                        if(post){
-                            if(this.viewPostId===post.id){this.retiredViewPosts ||= [];this.retiredViewPosts.push(post);}
-                            else this.releasePostImages([post]);
-                            this.localQueuePosts.delete('offline-'+id);
-                        }
-                        await this.refreshOffline();this.showToast('照片已重新保存；全部選好後按重試同步');
-                    }catch(error){this.showToast(error.message,'error');}
-                    finally{this.repairBusy=false;}
-                };
-                if(navigator.locks)return navigator.locks.request('shiguang-offline-sync',{ifAvailable:true},lock=>lock?perform():this.showToast('另一個分頁正在同步，請稍後再試','error'));
-                return perform();
-            }
-
-            async exportQueuedText(id) {
-                try {
-                    const entry=(await this.offlineStore('all')).find(e=>e.id===id);
-                    if(!entry)throw new Error('找不到待傳日記');
-                    const markdown='# '+entry.title+'\n\n- 日期：'+entry.date+'\n- 心情ID：'+entry.mood+'\n- 分類ID：'+entry.category+'\n\n## 內文\n\n'+entry.content+'\n';
-                    const url=URL.createObjectURL(new Blob([markdown],{type:'text/markdown;charset=utf-8'}));
-                    const a=document.createElement('a');a.href=url;a.download='待傳日記-'+entry.date+'.md';document.body.append(a);a.click();a.remove();
-                    setTimeout(()=>URL.revokeObjectURL(url),60000);
-                }catch(error){this.showToast('匯出失敗：'+error.message,'error');}
+                try { return await new Promise((resolve, reject) => {
+                    const tx = db.transaction('entries', action === 'all' ? 'readonly' : 'readwrite');
+                    const store = tx.objectStore('entries');
+                    const r = action === 'all' ? store.getAll() : action === 'put' ? store.put(value) : store.delete(value);
+                    tx.oncomplete = () => resolve(r.result); tx.onabort = tx.onerror = () => reject(tx.error || new Error('本機儲存失敗'));
+                }); } finally { db.close(); }
             }
 
             scheduleFolderAutoSync(force = false) {
@@ -1644,13 +1562,11 @@
                     this.pendingOfflineCount = pending; this.updateOfflineButtons();
                     document.getElementById('offlineStatus').textContent = (navigator.onLine ? '已連網' : '離線') + `・${pending} 篇待同步` + (this.offlineSyncing ? '・同步中' : '') + (this.offlineShellReady ? '・離線網站已就緒' : '・離線網站尚未就緒');
                     const renderEntry = e => {
-                        const photos = Object.entries({...e.cacheImages,...e.images}).map(([name, blob]) => {
+                        const photos = Object.entries(e.images).map(([name, blob]) => {
                             const url = URL.createObjectURL(blob); this.offlinePreviewUrls.push(url);
-                            return `<img src="${url}" alt="照片無法預覽：${escapeHtml(name)}" class="max-h-48 rounded-lg my-2" onerror="this.style.display='none';this.nextElementSibling.hidden=false"><p hidden class="text-xs my-2">照片無法預覽：${escapeHtml(name)}。若同步提示無法讀取，請重新選取原照片。</p>`;
+                            return `<img src="${url}" alt="${escapeHtml(name)}" class="max-h-48 rounded-lg my-2">`;
                         }).join('');
-                        const repair=e.status==='synced'?'':Object.keys(e.images || {}).map((name,index)=>`<label class="block my-2 text-xs">${escapeHtml(name)} <span class="underline">重新選取對應照片</span><input type="file" accept="image/*" class="block mt-1" onchange="app.replaceQueuedPhoto('${e.id}',${index},this)"></label>`).join('');
-                        const backup=e.status==='synced'?'':`<button onclick="app.exportQueuedText('${e.id}')" class="border rounded-full px-3 py-2 text-xs">匯出最新文字備份</button>`;
-                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${repair}${backup}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${e.status !== 'synced' && !e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${e.status !== 'synced' && !e.conflict ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
+                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${e.status !== 'synced' && !e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${e.status !== 'synced' && e.error ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
                     };
                     entries.sort((a,b) => b.created - a.created);
                     const waiting = entries.filter(e => e.status !== 'synced');
@@ -1729,7 +1645,7 @@
                     if (!pending.length) return this.showToast('沒有待同步的離線日記');
                     if (!pending.some(e => e.rootId === this.driveRoot.id && e.clientId === this.getDriveConfig().clientId)) return this.showToast('待傳日記綁定其他資料夾，請切回原設定後同步', 'error');
                 }
-                if (this.repairBusy || this.offlineSyncing || this.driveBusy || !navigator.onLine || !this.driveRoot || this.driveReadOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
+                if (this.offlineSyncing || this.driveBusy || !navigator.onLine || !this.driveRoot || this.driveReadOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
                 const perform = async () => {
                     if (this.offlineSyncing || this.driveBusy) return;
                     const waiting = (await this.offlineStore('all')).some(e => e.status !== 'synced' && !e.conflict && e.id !== this.offlineEditingId && e.rootId === this.driveRoot?.id && e.clientId === this.getDriveConfig().clientId);
@@ -1742,7 +1658,7 @@
                         for (const entry of entries) {
                             if (entry.status === 'synced' || entry.conflict || entry.id === this.offlineEditingId || entry.rootId !== this.driveRoot.id || entry.clientId !== config.clientId) continue;
                             try {
-                                this.syncingEntryId = entry.id; entry.error = ''; await this.validateQueuedPhotos(entry); await this.offlineStore('put', entry); await this.refreshOffline();
+                                this.syncingEntryId = entry.id; entry.error = ''; await this.offlineStore('put', entry); await this.refreshOffline();
                                 if(entry.target){await this.applyQueuedEdit(entry);changed=true;continue;}
                                 for(const [name,id] of Object.entries(entry.remoteImages||{})){
                                     if(!entry.images[name]){entry.images[name]=await this.driveRequest('files/'+id+'?alt=media&supportsAllDrives=true',{},'blob');await this.offlineStore('put',entry);}
@@ -1883,13 +1799,7 @@
                     return await (format === 'text' ? response.text() : format === 'blob' ? response.blob() : response.json());
                 } catch (error) {
                     if (error.name === 'AbortError') throw new Error('Google Drive 回應逾時或已取消，請確認網路後重試；待傳資料仍保留');
-                    const method=options.method || 'GET';
-                    const stage=upload ? '上傳檔案內容' : path.startsWith('files/generateIds') ? '建立上傳識別碼' : method==='GET' ? (path.includes('alt=media') ? '讀取雲端內容' : '讀取雲端檔案資訊') : method==='POST' ? '建立雲端檔案或資料夾' : '更新雲端檔案資訊';
-                    const message=error.message || '未知錯誤';
-                    const detail=message==='Load failed' || message==='Failed to fetch' ? '連線請求未完成，瀏覽器未提供原因' : message;
-                    const diagnostic=new Error(stage+'失敗：'+detail+'；待傳修改仍保留');
-                    diagnostic.status=error.status;
-                    throw diagnostic;
+                    throw error;
                 } finally { clearTimeout(timeout); options.signal?.removeEventListener('abort', relay); }
             }
 
@@ -2061,22 +1971,14 @@
             }
 
             async driveUpload(parent, name, blob, existingId = null) {
-                let bytes;
-                try{
-                    bytes=new Uint8Array(await blob.arrayBuffer());
-                    if(!bytes.length || bytes.length!==blob.size)throw new Error('檔案內容不完整');
-                }catch(error){throw new Error('讀取上傳內容失敗：'+name+'；請重新選取照片，待傳文字仍保留');}
-                const metadata=existingId?{name}:{name,parents:[parent]};
-                const boundary='shiguang_'+crypto.randomUUID();
-                const encoder=new TextEncoder();
-                const head=encoder.encode('--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+boundary+'\r\nContent-Type: '+(blob.type || 'application/octet-stream')+'\r\n\r\n');
-                const tail=encoder.encode('\r\n--'+boundary+'--\r\n');
-                // Send memory-backed bytes rather than a nested disk-backed Blob.
-                const body=new Uint8Array(head.length+bytes.length+tail.length);
-                body.set(head,0);body.set(bytes,head.length);body.set(tail,head.length+bytes.length);
-                try{
-                    return await this.driveRequest('files'+(existingId?'/'+existingId:'')+'?uploadType=multipart&fields=id,name,modifiedTime&supportsAllDrives=true',{method:existingId?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body},'json',true);
-                }catch(error){error.message=name+'：'+error.message;throw error;}
+                const metadata = existingId ? {name} : {name, parents:[parent]};
+                const boundary = 'shiguang_' + crypto.randomUUID();
+                const body = new Blob([
+                    '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n', JSON.stringify(metadata),
+                    '\r\n--' + boundary + '\r\nContent-Type: ' + (blob.type || 'application/octet-stream') + '\r\n\r\n', blob,
+                    '\r\n--' + boundary + '--\r\n'
+                ]);
+                return this.driveRequest('files' + (existingId ? '/' + existingId : '') + '?uploadType=multipart&fields=id,name,modifiedTime&supportsAllDrives=true', {method:existingId ? 'PATCH' : 'POST', headers:{'Content-Type':'multipart/related; boundary=' + boundary}, body}, 'json', true);
             }
 
             async queueDriveEdit() {
@@ -2095,16 +1997,7 @@
                     const images=Object.fromEntries(Object.entries(this.stagedImages).filter(([name])=>refs.has(name)));
                     const remoteImages=Object.fromEntries(Object.entries(post.driveImages||{}).filter(([name])=>refs.has(name)));
                     const cacheImages={};
-                    // Photo previews are optional: a stale Blob URL must not block saving text.
-                    for(const name of Object.keys(remoteImages)){
-                        if(!post.imagesMap[name])continue;
-                        try{
-                            const response=await fetch(post.imagesMap[name]);
-                            if(!response.ok)continue;
-                            const blob=await response.blob();
-                            if(blob.size)cacheImages[name]=blob;
-                        }catch(error){ /* Keep the remote reference and save the edit. */ }
-                    }
+                    for(const name of Object.keys(remoteImages)){if(post.imagesMap[name])cacheImages[name]=await(await fetch(post.imagesMap[name])).blob();}
                     const entry={id:crypto.randomUUID(), journalId:post.journalId || 'drive-' + post.driveNote.id, rootId:this.driveRoot.id, clientId:config.clientId,title,date,content,mood:value('postMood'),category:value('postCategory'),images,remoteImages,cacheImages,created:Date.now(),status:'pending',target:{folderId:post.id,noteId:post.driveNote.id,version:this.driveEditVersion,folder:post.driveFolder,originalContent:post.content,originalImages:post.driveImages||{}}};
                     await this.offlineStore('put',entry);this.closeEditor();await this.refreshOffline();this.showToast('修改已存於此裝置，將在背景同步');this.syncOffline();
                 }catch(error){this.showToast(error.message,'error');}finally{this.queueEditSaving=false;}
@@ -2214,5 +2107,6 @@
     <script>
         const app = new BlogJournalApp();
     </script>
+<script src="./weather.js"></script>
 </body>
 </html>
