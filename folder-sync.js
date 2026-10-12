@@ -91,6 +91,32 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
         await this.driveUpload(pair.cloudId,'note.md',new Blob([snap.md],{type:'text/markdown'}),pair.noteId);
         pair.base=snap.signature;await saveManifest();summary.upload++;
     };
+    this.folderConflicts = new Map();
+    const registerConflict = (pair,local,remote) => {
+        const key=pair.cloudId;
+        this.folderConflicts.set(key,{local:{...local.parsed,images:local.images},remote:{...remote.snap.parsed,images:remote.snap.images},resolve:async choice=>{
+            if(this.rootDirHandle!==localRoot||this.driveRoot?.id!==cloudRoot)throw Error('同步資料夾已變更，請重新比對');
+            const saved=JSON.parse(await(await(await localRoot.getFileHandle('.shiguang-sync.json')).getFile()).text());
+            if(JSON.stringify(saved)!==JSON.stringify(manifest))throw Error('同步紀錄已變更，請重新比對');
+            const nowLocal=await localSnapshot(pair.path),nowRemote=await remoteSnapshot(remote.post);
+            if(nowLocal.signature!==local.signature||nowRemote.signature!==remote.snap.signature)throw Error('日記已變更，請重新比對');
+            await this.saveConflictBackup({id:crypto.randomUUID(),title:local.parsed.title,content:local.md,images:local.images,remote:{content:remote.snap.md},cacheImages:remote.snap.images});
+            if(choice==='local')await upload(pair,nowLocal,remote.post,nowRemote);
+            else {
+                if(choice==='both') {
+                    const copy={...nowLocal,md:nowLocal.md.replace(/<!-- shiguang-id: [A-Za-z0-9-]+ -->\n?/g,'')};
+                    copy.md='<!-- shiguang-id: '+crypto.randomUUID()+' -->\n'+copy.md;
+                    await download(pair.path+'-copy-'+crypto.randomUUID().slice(0,8),copy);
+                }
+                const check=await remoteSnapshot(remote.post);if(check.signature!==nowRemote.signature)throw Error('雲端版本改變，未覆寫本機');
+                await download(pair.path,nowRemote,nowLocal);pair.base=nowRemote.signature;await saveManifest();
+            }
+            this.folderConflicts.delete(key);document.getElementById('folderConflictsBtn').hidden=!this.folderConflicts.size;
+            if(this.sourceMode==='local')await this.loadPostsFromFolder();await this.reloadDrivePosts();
+        }});
+        document.getElementById('folderConflictsBtn').hidden=false;
+    };
+    document.getElementById('folderConflictsBtn').hidden=true;
     this.folderSyncBusy=true;this.driveBusy=true;
     try {
         if(await localRoot.queryPermission({mode:'readwrite'})!=='granted' && await localRoot.requestPermission({mode:'readwrite'})!=='granted')throw Error('未取得本機寫入權限');
@@ -129,9 +155,9 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
             split(pair.path);const local=locals.get(pair.path);
             if(local&&remote){
                 if(local.signature===remote.snap.signature){pair.base=local.signature;await saveManifest();continue;}
-                if(!pair.base){summary.conflict++;continue;}
+                if(!pair.base){registerConflict(pair,local,remote);summary.conflict++;continue;}
                 const l=local.signature!==pair.base,r=remote.snap.signature!==pair.base;
-                if(l&&r){summary.conflict++;continue;}
+                if(l&&r){registerConflict(pair,local,remote);summary.conflict++;continue;}
                 if(l)await upload(pair,local,remote.post,remote.snap);
                 else if(r){await download(pair.path,remote.snap,local);pair.base=remote.snap.signature;await saveManifest();}
             }else if(local&&!remote&&!pair.base){await upload(pair,local);
@@ -157,6 +183,9 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
                 const sameDiary = [...locals].filter(([path,l]) => !(l.parsed.journalId && snap.parsed.journalId && l.parsed.journalId !== snap.parsed.journalId) && l.parsed.title === snap.parsed.title && l.parsed.date === snap.parsed.date);
                 if (sameDiary.length) {
                     sameDiary.forEach(([path]) => blockedLocalPaths.add(path));
+                    if(sameDiary.length===1 && !manifest.pairs.some(p=>p.path===sameDiary[0][0])) {
+                        const pair={path:sameDiary[0][0],cloudId:id,noteId:post.driveNote.id,base:null};manifest.pairs.push(pair);await saveManifest();registerConflict(pair,sameDiary[0][1],{post,snap});
+                    }
                     summary.conflict++;
                     continue;
                 }
@@ -172,6 +201,7 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
             const diverged = localMatch && localMatch.signature !== snap.signature;
             if (diverged) summary.conflict++;
             manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,journalId:snap.parsed.journalId || localMatch?.parsed.journalId,base:diverged ? null : snap.signature});await saveManifest();
+            if(diverged)registerConflict(manifest.pairs.at(-1),localMatch,{post,snap});
         }
         for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;if (automatic && !snap.parsed.journalId) { summary.deferred++; continue; } const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
         if (summary.deferred) this.showToast('部分日記需確認配對或刪除，請按「立即同步」手動處理', 'error');

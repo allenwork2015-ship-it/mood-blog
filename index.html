@@ -117,6 +117,7 @@
         #viewLocalSourceBtn[aria-pressed="true"], #viewDriveSourceBtn[aria-pressed="true"] { background: #68594b; color: #fff; border-color: #68594b; }
         .dark #viewLocalSourceBtn, .dark #viewDriveSourceBtn { background: #292524; color: #a8a29e; }
         .dark #viewLocalSourceBtn[aria-pressed="true"], .dark #viewDriveSourceBtn[aria-pressed="true"] { background: #d6c9bc; color: #292524; border-color: #d6c9bc; }
+    #conflictChoices[hidden], #folderConflictsBtn[hidden], #conflictBackupBtn[hidden] { display:none; }
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
@@ -168,6 +169,7 @@
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
             <button id="folderSyncBtn" disabled onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">立即同步</button><button id="viewLocalSourceBtn" aria-pressed="false" onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button id="viewDriveSourceBtn" aria-pressed="false" onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
         </div>
+        <button id="folderConflictsBtn" hidden onclick="app.openFolderConflicts()" class="border rounded-full px-3 py-2 text-xs mt-2">處理同步衝突</button>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
     <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -391,7 +393,7 @@
                 <section class="space-y-2" aria-labelledby="localStorageTitle">
                     <h4 id="localStorageTitle" class="font-semibold">操作日誌</h4>
                     <p class="text-xs text-warm-500">保留最近 100 筆操作結果，不保存日記內文與照片。清除日誌不影響日記或同步識別紀錄。</p>
-                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button>
+                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button><button onclick="app.viewConflictBackups().catch(e=>app.showToast(e.message,'error'))" class="border rounded-full px-3 py-2 text-xs">衝突版本備份</button>
                 </section>
                 <div class="space-y-2">
 <label class="flex items-center gap-2"><input id="folderSyncEnabled" type="checkbox" onchange="app.setFolderSyncEnabled(this.checked)"><span>自動同步本機與雲端</span></label>
@@ -491,7 +493,8 @@
                         ['editorModal', () => this.closeEditor()],
                         ['viewModal', () => this.closeViewModal()],
                         ['settingsModal', () => this.closeSettings()],
-                        ['operationLogModal', () => this.closeOperationLogs()]
+                        ['operationLogModal', () => this.closeOperationLogs()],
+                        ['conflictModal', () => this.closeConflictModal()]
                     ];
                     const visible = dialogs.filter(([id]) => !document.getElementById(id).classList.contains('hidden'));
                     if (!visible.length) return;
@@ -1674,7 +1677,7 @@
                         }).join('');
                         const repair=e.status==='synced'?'':Object.keys(e.images || {}).map((name,index)=>`<label class="block my-2 text-xs">${escapeHtml(name)} <span class="underline">重新選取對應照片</span><input type="file" accept="image/*" class="block mt-1" onchange="app.replaceQueuedPhoto('${e.id}',${index},this)"></label>`).join('');
                         const backup=e.status==='synced'?'':`<button onclick="app.exportQueuedText('${e.id}')" class="border rounded-full px-3 py-2 text-xs">匯出最新文字備份</button>`;
-                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${repair}${backup}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${e.status !== 'synced' && !e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${e.status !== 'synced' && !e.conflict ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
+                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || (e.status === 'synced' ? '雲端已儲存，可移除此裝置副本。' : 'Google 授權有效時會同步到原設定資料夾。'))}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${repair}${backup}${e.conflict && e.target ? `<button onclick="app.openEntryConflict('${e.id}')" class="border rounded-full px-3 py-2 text-xs">選擇保留版本</button>` : ''}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${e.status !== 'synced' && !e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${e.status !== 'synced' && !e.conflict ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}${e.status === 'synced' ? `<button onclick="app.removeOfflineCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">移除此裝置副本</button>` : ''}</details>`;
                     };
                     entries.sort((a,b) => b.created - a.created);
                     const waiting = entries.filter(e => e.status !== 'synced');
@@ -2295,6 +2298,7 @@
 
     </script>
     <script src="./folder-sync.js"></script>
+    <script src="./conflict-ui.js"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
