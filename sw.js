@@ -1,4 +1,4 @@
-const CACHE = 'shiguang-shell-v46-conflicts';
+const CACHE = 'shiguang-shell-v47-cleanup';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './folder-sync.js', './conflict-ui.js', './weather.js', './weather.css', './photo-compression.js', './完整設定說明.html', './assets/tailwind.js', './assets/fontawesome.css', './webfonts/fa-solid-900.woff2', './webfonts/fa-regular-400.woff2', './webfonts/fa-brands-400.woff2'];
 self.addEventListener('install', event => event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);await cache.addAll(SHELL);await self.skipWaiting();

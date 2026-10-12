@@ -431,7 +431,7 @@
   }
   engine.setThemeMode(app.themeMode);engine.setWeatherMode(mode);app.applyTheme();app.updateSettingsUI();resume();
  };
- app.fetchWeatherLocation=()=>{if(!engine)app.setWeatherMode('auto');else app.setWeatherMode('auto');engine.fetchLocalWeather();document.getElementById('weatherLocationHint').textContent='定位失敗時採臺北天氣；天氣服務不可用時採本機時間與晴天情境。';};
+ app.fetchWeatherLocation=()=>{app.setWeatherMode('auto');engine.fetchLocalWeather();document.getElementById('weatherLocationHint').textContent='定位失敗時採臺北天氣；天氣服務不可用時採本機時間與晴天情境。';};
  const applyTheme=app.applyTheme.bind(app);
  app.applyTheme=()=>{
   applyTheme();

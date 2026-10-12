@@ -1,5 +1,10 @@
 (() => {
  const p=BlogJournalApp.prototype;
+ const encodePhoto=async blob=>{
+  const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';
+  for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+  return {type:blob.type,data:btoa(binary)};
+ };
  document.body.insertAdjacentHTML('beforeend',`<div id="conflictModal" role="dialog" aria-modal="true" aria-labelledby="conflictTitle" class="hidden fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"><div class="bg-white dark:bg-darkCard rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5"><div class="flex justify-between"><h3 id="conflictTitle" class="font-semibold">處理版本衝突</h3><button onclick="app.closeConflictModal()" aria-label="關閉版本衝突" class="p-2">✕</button></div><p class="text-xs my-2">採用版本前保留備份並重新確認資料。照片以檔名列出，不自動合併。</p><div id="conflictComparison" class="grid sm:grid-cols-2 gap-4 my-4"></div><div id="conflictChoices" class="flex flex-wrap gap-2"><button class="border rounded-full px-3 py-2" onclick="app.resolveConflictChoice('local')">採用本機版</button><button class="border rounded-full px-3 py-2" onclick="app.resolveConflictChoice('remote')">採用雲端版</button><button class="border rounded-full px-3 py-2" onclick="app.resolveConflictChoice('both')">兩版都保留</button><button class="border rounded-full px-3 py-2" onclick="app.closeConflictModal()">稍後處理</button></div><p id="conflictResult" class="text-xs my-3" role="status"></p><button id="conflictBackupBtn" hidden class="border rounded-full px-3 py-2" onclick="app.exportConflictBackup()">下載本次版本備份</button></div></div>`);
  p.closeConflictModal=function(){if(this.conflictResolving)return;document.getElementById('conflictModal').classList.add('hidden');};
  p.showConflictComparison=function(local,remote){
@@ -16,8 +21,8 @@
  p.exportConflictBackup=async function(){
   if(!this.lastConflictBackup)return;
   const value=structuredClone(this.lastConflictBackup), images={};
-  for(const [name,blob]of Object.entries(value.images||{})){const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));images[name]={type:blob.type,data:btoa(binary)};}
-  for(const [name,blob]of Object.entries(value.cacheImages||{})){const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));images['雲端/'+name]={type:blob.type,data:btoa(binary)};}delete value.cacheImages;value.images=images;const url=URL.createObjectURL(new Blob([JSON.stringify(value)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='日記衝突備份-'+value.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  for(const [name,blob]of Object.entries(value.images||{})){images[name]=await encodePhoto(blob);}
+  for(const [name,blob]of Object.entries(value.cacheImages||{})){images['雲端/'+name]=await encodePhoto(blob);}delete value.cacheImages;value.images=images;const url=URL.createObjectURL(new Blob([JSON.stringify(value)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='日記衝突備份-'+value.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
  };
  p.openEntryConflict=async function(id){
   if(this.driveBusy)return this.showToast('同步進行中，請稍候','error');
