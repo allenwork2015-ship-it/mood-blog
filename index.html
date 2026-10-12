@@ -119,6 +119,7 @@
         .dark #viewLocalSourceBtn[aria-pressed="true"], .dark #viewDriveSourceBtn[aria-pressed="true"] { background: #d6c9bc; color: #292524; border-color: #d6c9bc; }
     </style>
 <link rel="stylesheet" href="./weather.css">
+<script src="./photo-compression.js"></script>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
 
@@ -1143,19 +1144,21 @@
                 document.getElementById('editorModal').classList.add('hidden');
             }
 
-            insertImageToContent(event) {
+            async insertImageToContent(event) {
                 if (this.driveBusy && !this.offlineSyncing && !this.offlineNew) return this.showToast('雲端操作進行中，請稍候', 'error');
                 const file = event.target.files[0];
                 if (!file) return;
 
-                if (file.size > 10 * 1024 * 1024) {
-                    this.showToast('圖片檔案過大', 'error');
-                    return;
-                }
-
-                const uniqueName = `img_${Date.now()}_${file.name}`;
-                this.stagedImages[uniqueName] = file;
-
+                if (this.imageProcessing) return this.showToast('照片處理中，請稍候', 'error');
+                const staged = this.stagedImages;
+                this.imageProcessing = true;
+                let compressed;
+                try { compressed = await compressJournalPhoto(file); }
+                catch (error) { this.showToast(error.message + '；日記文字仍保留', 'error'); return; }
+                finally { this.imageProcessing = false; event.target.value = ''; }
+                if (this.stagedImages !== staged || document.getElementById('editorModal').classList.contains('hidden')) return;
+                const uniqueName = 'img_' + crypto.randomUUID().slice(0,8) + '_' + compressed.name;
+                this.stagedImages[uniqueName] = compressed;
                 const textarea = document.getElementById('postContent');
                 const start = textarea.selectionStart;
                 const end = textarea.selectionEnd;
@@ -1167,10 +1170,11 @@
                 textarea.selectionStart = textarea.selectionEnd = start + markdownImageTag.length;
 
                 event.target.value = '';
-                this.showToast('已將照片插入游標處');
+                this.showToast('已插入照片（' + Math.round(compressed.size / 1024) + ' KB）');
             }
 
             async savePost() {
+                if (this.imageProcessing) return this.showToast('照片處理中，請稍候再儲存', 'error');
                 if (this.offlineNew && !document.getElementById('editPostId').value) return this.saveOffline();
                 if (!this.allowWrite()) return;
                 if (this.sourceMode === 'drive') return this.queueDriveEdit();
@@ -1476,7 +1480,7 @@
             async replaceQueuedPhoto(id,index,input) {
                 const file=input.files?.[0];input.value='';
                 if(!file)return;
-                if(file.size>10*1024*1024 || !file.type.startsWith('image/'))return this.showToast('請選取 10 MB 以下的圖片','error');
+                if(file.size>20*1024*1024 || !file.type.startsWith('image/'))return this.showToast('請選取 20 MB 以下的圖片','error');
                 const perform=async()=>{
                     if(this.offlineSyncing || this.driveBusy || this.repairBusy)return this.showToast('請等同步結束後再選取照片','error');
                     this.repairBusy=true;
@@ -1488,7 +1492,7 @@
                         const bytes=await file.arrayBuffer();
                         if(!bytes.byteLength)throw new Error('選取的照片沒有內容');
                         // Keep the existing path and Drive ID to avoid duplicate uploads.
-                        entry.images[name]=new Blob([bytes],{type:file.type});
+                        entry.images[name]=new Blob([bytes],{type:compressed.type});
                         if(entry.cacheImages?.[name])entry.cacheImages[name]=entry.images[name];
                         entry.photoErrors=(entry.photoErrors || []).filter(n=>n!==name);
                         entry.error='';
