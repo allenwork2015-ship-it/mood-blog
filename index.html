@@ -166,7 +166,7 @@
             <button id="newOfflineDiaryBtn" onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
             <button id="uploadDiaryBtn" disabled onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
             <span id="offlineStatus" class="text-xs" role="status">正在讀取本機日記…</span>
-            <button id="folderSyncBtn" disabled onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">同步本機與雲端</button><button id="viewLocalSourceBtn" aria-pressed="false" onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button id="viewDriveSourceBtn" aria-pressed="false" onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
+            <button id="folderSyncBtn" disabled onclick="app.syncFolders()" class="border rounded-full px-3 py-2 text-xs">立即同步</button><button id="viewLocalSourceBtn" aria-pressed="false" onclick="app.showSource('local')" class="border rounded-full px-3 py-2 text-xs">查看本機</button><button id="viewDriveSourceBtn" aria-pressed="false" onclick="app.showSource('drive')" class="border rounded-full px-3 py-2 text-xs">查看雲端</button>
         </div>
         <div id="offlineEntries" class="mt-3 space-y-2"></div>
     </section>
@@ -250,7 +250,7 @@
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">2．電腦：本機資料夾</h4>
                     <p>先按「選擇資料夾」，再新增或編輯日記；照片與文章存入所選資料夾。需使用支援資料夾讀寫的瀏覽器，唯讀模式無法修改原檔。</p>
-                    <p><strong>只用本機時，請勿設定雲端筆記資料夾。</strong>本機儲存不會自動加入雲端待傳。需要雙向更新時，請連接雲端後按「同步本機與雲端」。</p>
+                    <p><strong>只用本機時，請勿設定雲端筆記資料夾。</strong>本機儲存不會自動加入雲端待傳。需要雙向更新時，請連接雲端後按「立即同步」。</p>
                 </section>
                 <section class="space-y-2">
                     <h4 class="font-bold text-sm">3．筆電：本機與雲端同步</h4>
@@ -481,8 +481,9 @@
             }
 
             init() {
-                window.addEventListener('online', () => this.scheduleFolderAutoSync(true));
-                window.addEventListener('focus', () => this.scheduleFolderAutoSync());
+                window.addEventListener('online', () => { this.scheduleFolderAutoSync(true); this.scheduleCloudListRefresh(); });
+                window.addEventListener('focus', () => { this.scheduleFolderAutoSync(); this.scheduleCloudListRefresh(); });
+                document.addEventListener('visibilitychange', () => { if (!document.hidden) this.scheduleCloudListRefresh(); });
                 document.addEventListener('keydown', event => {
                     if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return;
                     const dialogs = [
@@ -524,6 +525,7 @@
                 this.readOnly = mode === 'local' ? false : this.driveReadOnly;
                 
                 this.currentPage = 1; this.checkPlatform(); this.renderPosts(); this.updateStats();
+                if (mode === 'drive') this.scheduleCloudListRefresh();
             }
 
             checkPlatform() {
@@ -1142,6 +1144,7 @@
             closeEditor() {
                 this.offlineEditingId = null;
                 document.getElementById('editorModal').classList.add('hidden');
+                this.resumeCloudListRefresh();
             }
 
             async insertImageToContent(event) {
@@ -1330,6 +1333,7 @@
                 this.viewPostId = null; this.viewGeneration = (this.viewGeneration || 0) + 1;
                 this.releasePostImages(this.retiredViewPosts || []); this.retiredViewPosts = [];
                 document.getElementById('viewModal').classList.add('hidden');
+                this.resumeCloudListRefresh();
             }
 
             async editLocalCopy(id) {
@@ -1597,6 +1601,8 @@
                 checkbox.closest('label').style.cursor = phone ? 'not-allowed' : '';
                 document.getElementById('folderSyncHint').textContent = phone ? '手機不需啟用本機雙向同步。雲端寫作與離線待傳日記仍會在連網且授權有效時自動上傳。' : '預設關閉。開啟後，本機儲存、恢復網路或回到頁面時延遲同步。閱讀與編輯期間暫緩；衝突及刪除請手動處理。';
                 const button = document.getElementById('folderSyncBtn');
+                button.hidden = !(this.rootDirHandle && this.driveRoot);
+                button.style.display = button.hidden ? 'none' : '';
                 button.disabled = !this.rootDirHandle || !this.driveRoot || this.driveRoot.id !== this.getDriveConfig().folderId || !this.driveToken || Date.now() >= this.driveExpires || this.driveReadOnly || !navigator.onLine || this.driveBusy || this.folderSyncBusy;
                 button.title = '連接本機及原雲端資料夾後，手動同步';
             }
@@ -2030,6 +2036,49 @@
                 try { await this.reloadDrivePosts(); this.showToast('已更新雲端日記列表'); }
                 catch (error) { this.showToast(error.message, 'error'); }
                 finally { this.driveBusy = false; }
+            }
+
+            scheduleCloudListRefresh() {
+                if (document.hidden || this.sourceMode !== 'drive' || !this.driveRoot || !this.driveToken || Date.now() >= this.driveExpires || !navigator.onLine) return;
+                if (Date.now() - (this.lastCloudListCheck || 0) < 60000) return;
+                clearTimeout(this.cloudListTimer);
+                this.cloudListTimer = setTimeout(() => this.refreshCloudListInBackground(), 800);
+            }
+
+            async refreshCloudListInBackground() {
+                if (this.cloudListBusy || this.driveBusy || this.offlineSyncing || this.folderSyncBusy || document.hidden || this.sourceMode !== 'drive' || !this.driveRoot || !this.driveToken || Date.now() >= this.driveExpires || !navigator.onLine) return;
+                if (['editorModal','viewModal'].some(id => !document.getElementById(id).classList.contains('hidden'))) { this.cloudRefreshDeferred = true; return; }
+                const root = this.driveRoot.id, token = this.driveToken;
+                this.cloudListBusy = true; this.lastCloudListCheck = Date.now();
+                let fresh;
+                try {
+                    fresh = await this.fetchDrivePosts(root);
+                    if (this.driveRoot?.id !== root || this.driveToken !== token || this.driveBusy || this.sourceMode !== 'drive' || ['editorModal','viewModal'].some(id => !document.getElementById(id).classList.contains('hidden'))) {
+                        this.releasePostImages(fresh); fresh = null; this.cloudRefreshDeferred = true; return;
+                    }
+                    const old = this.drivePosts;
+                    const fingerprint = posts => JSON.stringify(posts.map(p => [p.id,p.folderName,p.yearFolder,p.driveNote?.modifiedTime,p.title,p.date,p.mood,p.category,p.content,p.driveImages]));
+                    if (fingerprint(old) === fingerprint(fresh)) { this.releasePostImages(fresh); return; }
+                    // Transfer already loaded image URLs only for unchanged remote image references.
+                    for (const post of fresh) {
+                        const previous = old.find(p => p.id === post.id && p.driveNote?.modifiedTime === post.driveNote?.modifiedTime);
+                        if (!previous) continue;
+                        for (const [path,url] of Object.entries(previous.imagesMap || {})) if (previous.driveImages?.[path] === post.driveImages?.[path]) {
+                            post.imagesMap[path] = url; delete previous.imagesMap[path];
+                        }
+                        post.coverImage = this.postCover(post);
+                    }
+                    this.drivePosts = fresh; this.posts = fresh; fresh = null;
+                    this.releasePostImages(old); this.renderPosts(); this.updateStats();
+                } catch (error) {
+                    if (fresh) this.releasePostImages(fresh);
+                    if (this.driveRoot?.id === root && this.driveToken === token) this.showToast('雲端列表更新失敗，原列表保留：' + error.message, 'error');
+                } finally { this.cloudListBusy = false; }
+            }
+
+            resumeCloudListRefresh() {
+                if (!this.cloudRefreshDeferred) return;
+                this.cloudRefreshDeferred = false; this.lastCloudListCheck = 0; this.scheduleCloudListRefresh();
             }
 
             async reloadDrivePosts() {

@@ -174,7 +174,7 @@ BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
             manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,journalId:snap.parsed.journalId || localMatch?.parsed.journalId,base:diverged ? null : snap.signature});await saveManifest();
         }
         for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;if (automatic && !snap.parsed.journalId) { summary.deferred++; continue; } const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
-        if (summary.deferred) this.showToast('部分日記需確認配對或刪除，請按「同步本機與雲端」手動處理', 'error');
+        if (summary.deferred) this.showToast('部分日記需確認配對或刪除，請按「立即同步」手動處理', 'error');
         this.recordOperation('本機與雲端', automatic ? '自動雙向同步' : '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
         if (!automatic || summary.conflict) this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
     } catch(error){this.recordOperation('本機與雲端',automatic ? '自動雙向同步' : '雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
