@@ -118,6 +118,8 @@
         .dark #viewLocalSourceBtn, .dark #viewDriveSourceBtn { background: #292524; color: #a8a29e; }
         .dark #viewLocalSourceBtn[aria-pressed="true"], .dark #viewDriveSourceBtn[aria-pressed="true"] { background: #d6c9bc; color: #292524; border-color: #d6c9bc; }
     #conflictChoices[hidden], #folderConflictsBtn[hidden], #conflictBackupBtn[hidden] { display:none; }
+    #viewContent .journal-photo { margin:10px 0; }
+        #viewContent .journal-photo img { display:block; }
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
@@ -270,7 +272,7 @@
                     <summary class="cursor-pointer font-semibold">設定與問題排查</summary>
                     <div class="mt-3 space-y-2">
                         <p>更換雲端資料夾：齒輪 → Google Drive 設定 → 修改網址 → 儲存 → 登入。待傳日記仍綁定原資料夾。其他裝置更新後，到設定按「更新雲端列表」。</p>
-                        <p>無法上傳時，檢查網路、Google 授權、資料夾編輯權限及待傳錯誤訊息。Google Drive 請由正式 HTTPS 網址使用。</p>
+                        <p>無法上傳時，檢查網路、Google 授權、資料夾編輯權限及待傳錯誤訊息。Google Drive 請由正式 HTTPS 網址使用。從 LINE 開啟可能導致登入頁空白，請改用 Safari 或 Chrome 新分頁。</p>
                         <p>雙向同步的對應紀錄為 .shiguang-sync.json，本機更新前的備份在 .shiguang-backups，請保留。</p>
                         <p><a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">部署與 Google Cloud 完整設定說明</a></p>
                     </div>
@@ -348,7 +350,7 @@
             </div>
             <div class="p-5 sm:p-8 overflow-y-auto space-y-5 flex-grow">
                 <h2 id="viewTitle" class="serif-title text-xl sm:text-2xl font-bold text-warm-900 dark:text-stone-100 leading-snug"></h2>
-                <div id="viewContent" class="text-warm-800 dark:text-stone-300 leading-relaxed text-sm sm:text-base space-y-4 font-sans"></div>
+                <div id="viewContent" class="text-warm-800 dark:text-stone-300 leading-relaxed text-sm sm:text-base font-sans"></div>
             </div>
             <div class="px-5 sm:px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-between rounded-b-3xl">
                 <div class="text-[11px] sm:text-xs text-warm-400 dark:text-stone-500" id="viewUpdatedAt">本機檔案</div>
@@ -978,6 +980,10 @@
             }
 
             queuePageCovers(posts) {
+                if(this.driveBusy || this.cloudListBusy){
+                    if(!this.coverRetryTimer)this.coverRetryTimer=setTimeout(()=>{this.coverRetryTimer=null;this.queuePageCovers(this.posts||[]);},500);
+                    return;
+                }
                 this.coverQueue ||= [];
                 this.coverWorkers ||= 0;
                 for (const post of posts) {
@@ -998,7 +1004,7 @@
                                 if (!this.posts.includes(post)) continue;
                                 if (!post.imagesMap[path]) post.imagesMap[path] = URL.createObjectURL(blob);
                                 post.coverImage = this.postCover(post);
-                                this.renderPosts();
+                                this.requestPostsRender();
                             } catch (error) {
                                 post.coverFailed = true;
                                 this.showToast('部分封面載入失敗，可在設定中按「更新雲端列表」', 'error');
@@ -1293,10 +1299,10 @@
                     const key = Object.keys(post.imagesMap || {}).find(name => escapeHtml(name) === path);
                     const url = key === undefined ? null : post.imagesMap[key];
                     if (!url) return key === undefined && Object.keys(post.driveImages || {}).some(name => escapeHtml(name) === path) ? '<div class="my-4 p-4 text-sm text-warm-500">照片載入中…</div>' : tag;
-                    return `<div class="my-4 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${url}" alt="${alt}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`;
+                    return `<div class="journal-photo my-2 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${url}" alt="${alt}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`;
                 });
 
-                document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>');
+                document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>').replace(/(?:<br>\s*)+(<div class="journal-photo)/g, '$1').replace(/(<\/div>)(?:<br>\s*)+/g, '$1');
 
                 document.getElementById('viewEditBtn').onclick = () => {
                     if (post.localEntry) return this.editLocalCopy(post.localEntry.id);
@@ -1832,6 +1838,7 @@
             }
 
             requestDriveAuthorization(config) {
+                if (/Line\//i.test(navigator.userAgent)) return Promise.reject(new Error('LINE 內建瀏覽器可能出現 Google 登入空白，請用 Safari 或 Chrome 開新分頁並貼上網站網址登入；待傳資料仍保留'));
                 // Keep requestAccessToken in the original click stack; no asynchronous work before it.
                 return new Promise((resolve, reject) => {
                     let settled = false;
@@ -1840,7 +1847,7 @@
                         settled = true; clearTimeout(timer);
                         error ? reject(error) : resolve(result);
                     };
-                    const timer = setTimeout(() => finish(new Error('Google 登入等待逾時，請關閉空白登入頁後再試；iPhone 可改用 Safari。待傳日記仍保留')), 90000);
+                    const timer = setTimeout(() => finish(new Error('Google 登入等待逾時；若由 LINE 開啟，請改用 Safari 或 Chrome 新分頁開啟網站。待傳日記仍保留')), 90000);
                     try {
                         const client = window.google.accounts.oauth2.initTokenClient({
                             client_id: config.clientId,
@@ -2056,17 +2063,9 @@
                     const old = this.drivePosts;
                     const fingerprint = posts => JSON.stringify(posts.map(p => [p.id,p.folderName,p.yearFolder,p.driveNote?.modifiedTime,p.title,p.date,p.mood,p.category,p.content,p.driveImages]));
                     if (fingerprint(old) === fingerprint(fresh)) { this.releasePostImages(fresh); return; }
-                    // Transfer already loaded image URLs only for unchanged remote image references.
-                    for (const post of fresh) {
-                        const previous = old.find(p => p.id === post.id && p.driveNote?.modifiedTime === post.driveNote?.modifiedTime);
-                        if (!previous) continue;
-                        for (const [path,url] of Object.entries(previous.imagesMap || {})) if (previous.driveImages?.[path] === post.driveImages?.[path]) {
-                            post.imagesMap[path] = url; delete previous.imagesMap[path];
-                        }
-                        post.coverImage = this.postCover(post);
-                    }
-                    this.drivePosts = fresh; this.posts = fresh; fresh = null;
-                    this.releasePostImages(old); this.renderPosts(); this.updateStats();
+                    const posts = this.adoptDrivePosts(fresh);
+                    this.posts = posts; fresh = null;
+                    this.renderPosts(); this.updateStats();
                 } catch (error) {
                     if (fresh) this.releasePostImages(fresh);
                     if (this.driveRoot?.id === root && this.driveToken === token) this.showToast('雲端列表更新失敗，原列表保留：' + error.message, 'error');
@@ -2079,8 +2078,8 @@
             }
 
             async reloadDrivePosts() {
-                const posts = await this.fetchDrivePosts(this.driveRoot.id);
-                this.releasePostImages(this.drivePosts); this.drivePosts = posts;
+                const loaded = await this.fetchDrivePosts(this.driveRoot.id);
+                const posts = this.adoptDrivePosts(loaded);
                 if (this.sourceMode === 'drive') { this.closeViewModal(); this.posts = posts; }
                 this.renderPosts(); this.updateStats();
             }
@@ -2293,6 +2292,7 @@
     </script>
     <script src="./folder-sync.js"></script>
     <script src="./conflict-ui.js"></script>
+    <script src="./performance.js"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
