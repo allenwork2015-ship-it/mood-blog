@@ -15,10 +15,10 @@
   requestAnimationFrame(()=>{this.postsRenderPending=false;this.renderPosts();});
  };
  p.adoptDrivePosts=function(incoming){
-  const old=this.drivePosts||[],kept=new Set();
+  const old=this.drivePosts||[],kept=new Set(),byId=new Map(old.map(p=>[p.id,p]));
   const fingerprint=p=>JSON.stringify([p.driveNote?.modifiedTime,p.content,p.title,p.date,p.mood,p.category,p.driveImages]);
   const posts=incoming.map(post=>{
-   const previous=old.find(p=>p.id===post.id);
+   const previous=byId.get(post.id);
    if(previous&&fingerprint(previous)===fingerprint(post)){
     previous.driveFolder=post.driveFolder;previous.driveNote=post.driveNote;previous.folderName=post.folderName;previous.yearFolder=post.yearFolder;
     this.releasePostImages([post]);kept.add(previous);return previous;

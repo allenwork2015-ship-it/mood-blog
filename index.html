@@ -124,6 +124,7 @@
     #operationRecordsPanel[hidden], #performanceRecordsPanel[hidden] { display:none; }
         .system-record-tab[aria-selected="true"] { background:#68594b;color:white; }
         .dark .system-record-tab[aria-selected="true"] { background:#d6c9bc;color:#292524; }
+    button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline:2px solid #9a8b7d; outline-offset:3px; }
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
@@ -234,7 +235,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 (Mood & Blog Journal) &copy; 2026. Mobile Reader Mode.</p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 01</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -245,42 +246,16 @@
                     <i class="fa-solid fa-circle-question text-warm-500"></i>
                     <span>拾光手札行動操作手冊</span>
                 </h3>
-                <button onclick="app.closeManualModal()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
+                <button onclick="app.closeManualModal()" aria-label="關閉手冊" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
             <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-warm-700 dark:text-stone-300 leading-relaxed font-sans flex-grow">
-                <section class="space-y-2">
-                    <h4 class="font-bold text-sm">1．手機：雲端與離線寫作</h4>
-                    <p>首次到齒輪設定 Google Drive 筆記資料夾網址，儲存後按「Google Drive」登入；用戶端 ID 已預設。按「寫新日記」或筆尖寫作，文字與照片先存此裝置，再背景上傳。</p>
-                    <p>離線前等顯示「離線網站已就緒」。沒網路時按「新增離線日記」；網頁開著、連網且授權有效後自動上傳，也可按「上傳日記」。授權到期需重新登入。</p>
-                </section>
-                <section class="space-y-2">
-                    <h4 class="font-bold text-sm">2．電腦：本機資料夾</h4>
-                    <p>先按「選擇資料夾」，再新增或編輯日記；照片與文章存入所選資料夾。需使用支援資料夾讀寫的瀏覽器，唯讀模式無法修改原檔。</p>
-                    <p><strong>只用本機時，請勿設定雲端筆記資料夾。</strong>本機儲存不會自動加入雲端待傳。需要雙向更新時，請連接雲端後按「立即同步」。</p>
-                </section>
-                <section class="space-y-2">
-                    <h4 class="font-bold text-sm">3．筆電：本機與雲端同步</h4>
-                    <p>本機與雲端皆連接後，可切換查看並按「立即同步」。設定可啟用自動同步，閱讀與編輯時暫緩；離線先存本機，連網再同步。待傳上傳需先完成，衝突可選擇保留版本，刪除需確認。</p>
-                    <p>單邊修改會更新另一邊；兩邊都修改時保留原資料並提示衝突。同步刪除逐篇確認，取消不刪除。請避免多台裝置同時修改同一篇。</p>
-                    <p>「上傳日記」只處理此裝置已保存的待傳日記，不會重新匯入本機列表。本機日記新增與修改請透過雙向同步更新。</p>
-                </section>
-                <section class="space-y-2">
-                    <h4 class="font-bold text-sm">4．閱讀與資料保存</h4>
-                    <p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。待傳日記未開始上傳前可編輯或刪除；同步成功後清除暫存內容，設定內「操作日誌」保留最近 100 筆結果；必要的同步識別資料仍保留。編輯已同步日記需連接原雲端資料夾。</p>
-                    <p><strong>離線不保證能閱讀全部雲端日記。</strong>本機檔案與已存於此裝置的內容可讀；未下載的雲端文章及照片仍需網路。關閉網頁或鎖定手機後，不保證背景上傳。</p>
-                    <p>正常重新整理會保留待傳資料；清除網站資料、使用無痕模式或更換裝置可能無法保留。清除前請確認所有日記已同步。視窗可按 X 或 Esc 關閉，關閉不會自動儲存。</p>
-                </section>
-                <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3">
-                    <summary class="cursor-pointer font-semibold">設定與問題排查</summary>
-                    <div class="mt-3 space-y-2">
-                        <p>更換雲端資料夾：齒輪 → Google Drive 設定 → 修改網址 → 儲存 → 登入。待傳日記仍綁定原資料夾。其他裝置更新後，到設定按「更新雲端列表」。</p>
-                        <p>無法上傳時，檢查網路、Google 授權、資料夾編輯權限及待傳錯誤訊息。Google Drive 請由正式 HTTPS 網址使用。從 LINE 開啟可能導致登入頁空白，請改用 Safari 或 Chrome 新分頁。</p>
-                        <p>雙向同步的對應紀錄為 .shiguang-sync.json，本機更新前的備份在 .shiguang-backups，請保留。</p>
-                        <p><a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">部署與 Google Cloud 完整設定說明</a></p>
-                    </div>
-                </details>
+                <section class="space-y-2"><h4 class="font-bold text-sm">1．選擇使用方式</h4><p><strong>手機：</strong>設定筆記資料夾網址 → 儲存設定 → Google Drive 登入。請用 Safari 或 Chrome 新分頁；LINE 內建瀏覽器可能無法登入。</p><p><strong>電腦本機：</strong>選擇資料夾後寫作，文章與照片只存該資料夾。本機唯讀模式不能修改原檔。</p></section>
+                <section class="space-y-2"><h4 class="font-bold text-sm">2．寫作與閱讀</h4><p>按「寫新日記」或筆尖新增，開啟文章後可編輯或刪除。選照片後自動壓縮，相簿原檔不變；透明圖片與動畫保留原格式。</p><p>搜尋與心情篩選涵蓋全部日記，每頁 12 篇。文字先顯示，照片接近閱讀位置再載入；失敗可重試。視窗按 X 或 Esc 關閉，關閉不會自動儲存。</p></section>
+                <section class="space-y-2"><h4 class="font-bold text-sm">3．離線與上傳</h4><p>先連網設定雲端資料夾，確認「離線網站已就緒」。離線可新增日記；已連接資料來源時改用「寫新日記」。</p><p>雲端寫作先存此裝置，網頁開著、連網且授權有效後上傳。「上傳日記」只處理待傳資料，不匯入整個本機列表。照片讀取失敗可在待傳區重新選取原照片，並匯出最新文字。</p><p><strong>清除網站資料前，先確認全部日記已同步。</strong>正常重新整理會保留待傳資料；無痕模式、換裝置或清除網站資料可能失去暫存。關閉網頁或鎖定手機後不保證背景上傳，也不保證離線可讀全部雲端日記。</p></section>
+                <section class="space-y-2"><h4 class="font-bold text-sm">4．本機與雲端同步</h4><p>兩邊連接後按「立即同步」，或在設定啟用自動同步；手機不需勾選。自動同步在儲存或恢復連線後執行，閱讀與編輯時暫緩。</p><p>衝突時可比較版本，選本機、雲端、兩版保留或稍後處理；覆寫前備份。背景不刪除，手動刪除逐篇確認。</p><p><strong>本機若是 Google Drive 電腦版的同步資料夾，請由電腦版同步，不要再執行拾光手札雙向同步。</strong>請保留 .shiguang-sync.json 與 .shiguang-backups；它們記錄對應與備份，也可能被電腦版上傳。</p></section>
+                <details class="border border-warm-200 dark:border-darkBorder rounded-xl p-3"><summary class="cursor-pointer font-semibold">設定與問題排查</summary><div class="mt-3 space-y-2"><p>更換雲端資料夾：齒輪 → 修改網址 → 儲存設定 → 登入。待傳日記仍綁定原資料夾。</p><p>回到雲端頁面會背景更新，也可按「更新雲端列表」。上傳失敗請檢查網路、授權與資料夾編輯權限。</p><p>「系統紀錄」預設顯示操作結果，可切換效能診斷；兩者分別清除。衝突備份可另行查看、下載。</p><p>動態天象預設關閉，啟用後與外觀日夜連動；點「取得所在地天氣」才要求定位。</p><p><a href="./完整設定說明.html" target="_blank" rel="noopener" class="underline">Google Cloud 與部署設定說明</a></p></div></details>
             </div>
             <div class="px-6 py-4 bg-warm-50/60 dark:bg-stone-900/50 border-t border-warm-100 dark:border-darkBorder flex items-center justify-end rounded-b-3xl">
                 <button onclick="app.closeManualModal()" class="px-6 py-2 bg-warm-800 hover:bg-warm-900 dark:bg-stone-100 dark:text-stone-900 text-warm-50 text-xs font-medium rounded-full transition-all shadow-sm">我知道了</button>
@@ -293,7 +268,7 @@
         <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-warm-200 dark:border-darkBorder fade-in">
             <div class="px-6 py-5 border-b border-warm-100 dark:border-darkBorder flex items-center justify-between">
                 <h3 id="editorModalTitle" class="serif-title text-lg sm:text-xl font-bold text-warm-900 dark:text-stone-100">撰寫新日記</h3>
-                <button onclick="app.closeEditor()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
+                <button onclick="app.closeEditor()" aria-label="關閉編輯器" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -348,7 +323,7 @@
                     <span id="viewMoodBadge" class="px-3 py-1 bg-warm-100 dark:bg-stone-800 text-warm-800 dark:text-stone-200 rounded-full text-xs font-medium flex items-center gap-1.5"></span>
                     <span id="viewDate" class="text-xs text-warm-500 dark:text-stone-400 font-sans"></span>
                 </div>
-                <button onclick="app.closeViewModal()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
+                <button onclick="app.closeViewModal()" aria-label="關閉日記" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500 transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -394,7 +369,7 @@
                     <i class="fa-solid fa-gear text-warm-500"></i>
                     <span>設定與偏好</span>
                 </h3>
-                <button onclick="app.closeSettings()" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500">
+                <button onclick="app.closeSettings()" aria-label="關閉設定" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800 flex items-center justify-center text-warm-500">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -444,11 +419,12 @@
                         <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
                     </div>
                 </div>
+                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 01｜更新日期：2026-10-13</p>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-20 sm:bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-xs sm:max-w-sm bg-warm-900 text-warm-50 dark:bg-stone-100 dark:text-stone-900 px-4 sm:px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 text-xs sm:text-sm">
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-20 sm:bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-xs sm:max-w-sm bg-warm-900 text-warm-50 dark:bg-stone-100 dark:text-stone-900 px-4 sm:px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 text-xs sm:text-sm">
         <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
         <span id="toastMessage">操作成功</span>
     </div>
@@ -1273,22 +1249,6 @@
                 }
             }
 
-            async loadViewImages(post) {
-                if (post.imageLoadPromise) return post.imageLoadPromise;
-                post.imageLoadPromise = (async () => {
-                    if (post.coverPromise) { try { await post.coverPromise; } catch (error) {} }
-                    for (const [path, id] of Object.entries(post.driveImages || {})) {
-                        if (post.imagesMap[path]) continue;
-                        const blob = await this.driveRequest('files/' + id + '?alt=media&supportsAllDrives=true', {}, 'blob');
-                        // The source may have changed while the photograph was downloading.
-                        if (!this.posts.includes(post)) return;
-                        post.imagesMap[path] = URL.createObjectURL(blob);
-                    }
-                })();
-                try { await post.imageLoadPromise; }
-                finally { post.imageLoadPromise = null; }
-            }
-
             openViewModal(postId) {
                 const post = this.displayPosts().find(p => p.id === postId);
                 if (!post) return;
@@ -1515,7 +1475,8 @@
                         if(!entry)throw new Error('待傳日記已更新，請重新查看');
                         const name=Object.keys(entry.images || {})[index];
                         if(!name)throw new Error('找不到原照片');
-                        const bytes=await file.arrayBuffer();
+                        const compressed=await compressJournalPhoto(file);
+                        const bytes=await compressed.arrayBuffer();
                         if(!bytes.byteLength)throw new Error('選取的照片沒有內容');
                         // Keep the existing path and Drive ID to avoid duplicate uploads.
                         entry.images[name]=new Blob([bytes],{type:compressed.type});
@@ -1694,9 +1655,9 @@
                             const url = URL.createObjectURL(blob); this.offlinePreviewUrls.push(url);
                             return `<img src="${url}" alt="照片無法預覽：${escapeHtml(name)}" class="max-h-48 rounded-lg my-2" onerror="this.style.display='none';this.nextElementSibling.hidden=false"><p hidden class="text-xs my-2">照片無法預覽：${escapeHtml(name)}。若同步提示無法讀取，請重新選取原照片。</p>`;
                         }).join('');
-                        const repair=e.status==='synced'?'':Object.keys(e.images || {}).map((name,index)=>`<label class="block my-2 text-xs">${escapeHtml(name)} <span class="underline">重新選取對應照片</span><input type="file" accept="image/*" class="block mt-1" onchange="app.replaceQueuedPhoto('${e.id}',${index},this)"></label>`).join('');
-                        const backup=e.status==='synced'?'':`<button onclick="app.exportQueuedText('${e.id}')" class="border rounded-full px-3 py-2 text-xs">匯出最新文字備份</button>`;
-                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || 'Google 授權有效時會同步到原設定資料夾。')}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${repair}${backup}${e.conflict && e.target ? `<button onclick="app.openEntryConflict('${e.id}')" class="border rounded-full px-3 py-2 text-xs">選擇保留版本</button>` : ''}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${e.status !== 'synced' && !e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${e.status !== 'synced' && !e.conflict ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}</details>`;
+                        const repair=Object.keys(e.images || {}).map((name,index)=>`<label class="block my-2 text-xs">${escapeHtml(name)} <span class="underline">重新選取對應照片</span><input type="file" accept="image/*" class="block mt-1" onchange="app.replaceQueuedPhoto('${e.id}',${index},this)"></label>`).join('');
+                        const backup=`<button onclick="app.exportQueuedText('${e.id}')" class="border rounded-full px-3 py-2 text-xs">匯出最新文字備份</button>`;
+                        return `<details class="p-3 border rounded-xl"><summary>${escapeHtml(e.title)}・${escapeHtml(e.date)}・${this.syncLabel(e)}</summary><p class="text-xs mt-2">${escapeHtml(e.error || 'Google 授權有效時會同步到原設定資料夾。')}</p><p class="whitespace-pre-wrap mt-2 text-sm">${escapeHtml(e.content)}</p>${photos}${repair}${backup}${e.conflict && e.target ? `<button onclick="app.openEntryConflict('${e.id}')" class="border rounded-full px-3 py-2 text-xs">選擇保留版本</button>` : ''}${e.conflict ? `<details class="mt-2"><summary>比較版本</summary><h5 class="font-semibold mt-2">雲端目前版本</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.remoteConflictContent || '雲端內容尚未取得')}</pre><h5 class="font-semibold mt-2">本機修改</h5><pre class="whitespace-pre-wrap text-xs">${escapeHtml(e.content)}</pre></details>` : ''}${e.conflict ? `<button onclick="app.keepConflictCopy('${e.id}')" class="border rounded-full px-3 py-2 text-xs">保留雲端，另存本機修改副本</button>` : ''}${!e.ids && !e.target ? `<button onclick="app.editOfflineEntry('${e.id}')" class="border rounded-full px-3 py-2 text-xs">編輯待傳日記</button>` : ''}${!e.conflict ? `<button onclick="app.syncOffline(true)" class="border rounded-full px-3 py-2 text-xs">重試同步</button>` : ''}</details>`;
                     };
                     entries.sort((a,b) => b.created - a.created);
                     const waiting = entries.filter(e => e.status !== 'synced');
