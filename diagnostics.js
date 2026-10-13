@@ -19,12 +19,12 @@
    catch(error){done(true);throw error;}
   };
  }
- document.body.insertAdjacentHTML('beforeend','<div id="performanceModal" role="dialog" aria-modal="true" aria-labelledby="performanceTitle" class="hidden fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4"><div class="bg-white dark:bg-darkCard rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5"><div class="flex justify-between"><h3 id="performanceTitle" class="font-semibold">效能紀錄</h3><button onclick="app.closePerformanceRecords()" aria-label="關閉效能紀錄" class="p-2">✕</button></div><p class="text-xs my-3">最近 100 筆，僅保留本次開啟期間。耗時包含排隊與網路等待；請求數是期間總量，可能含重疊背景工作。流程返回不代表上傳成功，請以操作日誌為準。</p><div class="flex gap-2 mb-3"><button onclick="app.exportPerformanceRecords()" class="border rounded-full px-3 py-2 text-xs">匯出量測紀錄</button><button onclick="app.clearPerformanceRecords()" class="border rounded-full px-3 py-2 text-xs">清除量測紀錄</button></div><div id="performanceRows" class="space-y-2"></div></div></div>');
- p.openPerformanceRecords=function(){
+ p.renderPerformanceRecords=function(){
   document.getElementById('performanceRows').innerHTML=(this.performanceRecords||[]).map(r=>'<div class="border rounded-xl p-3 text-xs"><p>'+new Date(r.time).toLocaleTimeString('zh-TW')+'・'+r.operation+'</p><p>'+r.milliseconds+' ms・'+r.requests+' 次雲端請求・'+r.result+'</p></div>').join('')||'目前沒有量測紀錄。';
-  document.getElementById('performanceModal').classList.remove('hidden');
+
  };
- p.closePerformanceRecords=function(){document.getElementById('performanceModal').classList.add('hidden');};
- p.clearPerformanceRecords=function(){this.performanceRecords=[];this.openPerformanceRecords();};
+ p.openPerformanceRecords=function(){this.openOperationLogs();this.selectSystemRecordTab('performance');};
+ p.closePerformanceRecords=function(){this.closeOperationLogs();};
+ p.clearPerformanceRecords=function(){this.performanceRecords=[];this.renderPerformanceRecords();};
  p.exportPerformanceRecords=function(){const url=URL.createObjectURL(new Blob([JSON.stringify({format:'shiguang-performance-v1',records:this.performanceRecords||[]},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='拾光手札效能紀錄.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);};
 })();

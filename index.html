@@ -121,6 +121,9 @@
     #viewContent .journal-photo { margin:10px 0; }
         #viewContent .journal-photo img { display:block; }
     #viewContent .view-photo-slot { height:clamp(180px,40vh,320px); display:flex; align-items:center; justify-content:center; color:#9a8b7d; font-size:12px; }
+    #operationRecordsPanel[hidden], #performanceRecordsPanel[hidden] { display:none; }
+        .system-record-tab[aria-selected="true"] { background:#68594b;color:white; }
+        .dark .system-record-tab[aria-selected="true"] { background:#d6c9bc;color:#292524; }
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
@@ -373,10 +376,14 @@
     <div id="operationLogModal" role="dialog" aria-modal="true" aria-labelledby="operationLogTitle" class="fixed inset-0 z-[60] bg-warm-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-darkCard rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col border border-warm-200 dark:border-darkBorder">
             <div class="px-6 py-4 border-b border-warm-100 dark:border-darkBorder flex items-center justify-between">
-                <h3 id="operationLogTitle" class="font-semibold">操作日誌（最近 100 筆）</h3>
-                <button id="closeOperationLogBtn" onclick="app.closeOperationLogs()" aria-label="關閉操作日誌" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800">✕</button>
+                <h3 id="operationLogTitle" class="font-semibold">系統紀錄</h3>
+                <button id="closeOperationLogBtn" onclick="app.closeOperationLogs()" aria-label="關閉系統紀錄" class="w-8 h-8 rounded-full hover:bg-warm-100 dark:hover:bg-stone-800">✕</button>
             </div>
-            <div id="syncedEntries" class="p-5 overflow-y-auto space-y-2 break-words min-h-0"></div>
+            <div class="p-5 overflow-y-auto min-h-0">
+                <div class="flex gap-2 mb-4" role="tablist" aria-label="紀錄類型"><button id="operationRecordsTab" role="tab" aria-controls="operationRecordsPanel" onclick="app.selectSystemRecordTab('operations')" class="system-record-tab border rounded-full px-3 py-2 text-sm">操作紀錄</button><button id="performanceRecordsTab" role="tab" aria-controls="performanceRecordsPanel" onclick="app.selectSystemRecordTab('performance')" class="system-record-tab border rounded-full px-3 py-2 text-sm">效能診斷</button></div>
+                <section id="operationRecordsPanel" role="tabpanel" aria-labelledby="operationRecordsTab"><p class="text-xs mb-3">最近 100 筆操作結果，重新整理後仍保留。清除不影響日記與同步識別資料。</p><button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs mb-3">清除操作紀錄</button><div id="syncedEntries" class="space-y-2 break-words"></div></section>
+                <section id="performanceRecordsPanel" hidden role="tabpanel" aria-labelledby="performanceRecordsTab"><p class="text-xs mb-3">本次開啟最近 100 筆。耗時含排隊與網路等待，請求數可能含重疊背景工作；流程返回不代表同步成功。</p><div class="flex flex-wrap gap-2 mb-3"><button onclick="app.exportPerformanceRecords()" class="border rounded-full px-3 py-2 text-xs">匯出量測紀錄</button><button onclick="app.clearPerformanceRecords()" class="border rounded-full px-3 py-2 text-xs">清除效能紀錄</button></div><div id="performanceRows" class="space-y-2"></div></section>
+            </div>
         </div>
     </div>
     <!-- 設定 Modal -->
@@ -394,9 +401,9 @@
 
             <div class="space-y-5 text-sm">
                 <section class="space-y-2" aria-labelledby="localStorageTitle">
-                    <h4 id="localStorageTitle" class="font-semibold">操作日誌</h4>
-                    <p class="text-xs text-warm-500">保留最近 100 筆操作結果，不保存日記內文與照片。清除日誌不影響日記或同步識別紀錄。</p>
-                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button><button onclick="app.viewConflictBackups().catch(e=>app.showToast(e.message,'error'))" class="border rounded-full px-3 py-2 text-xs">衝突版本備份</button><button onclick="app.openPerformanceRecords()" class="border rounded-full px-3 py-2 text-xs">效能紀錄</button>
+                    <h4 id="localStorageTitle" class="font-semibold">系統紀錄</h4>
+                    <p class="text-xs text-warm-500">查看同步結果與效能量測；衝突版本備份獨立保存。</p>
+                    <button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">系統紀錄</button><button onclick="app.viewConflictBackups().catch(e=>app.showToast(e.message,'error'))" class="border rounded-full px-3 py-2 text-xs">衝突版本備份</button>
                 </section>
                 <div class="space-y-2">
 <label class="flex items-center gap-2"><input id="folderSyncEnabled" type="checkbox" onchange="app.setFolderSyncEnabled(this.checked)"><span>自動同步本機與雲端</span></label>
@@ -497,8 +504,7 @@
                         ['viewModal', () => this.closeViewModal()],
                         ['settingsModal', () => this.closeSettings()],
                         ['operationLogModal', () => this.closeOperationLogs()],
-                        ['conflictModal', () => this.closeConflictModal()],
-                        ['performanceModal', () => this.closePerformanceRecords()]
+                        ['conflictModal', () => this.closeConflictModal()]
                     ];
                     const visible = dialogs.filter(([id]) => !document.getElementById(id).classList.contains('hidden'));
                     if (!visible.length) return;
@@ -1421,7 +1427,17 @@
                 } catch (error) { document.getElementById('syncedEntries').textContent = '無法讀取操作日誌。'; }
             }
 
+            selectSystemRecordTab(tab) {
+                const performanceTab = tab === 'performance';
+                document.getElementById('operationRecordsPanel').hidden = performanceTab;
+                document.getElementById('performanceRecordsPanel').hidden = !performanceTab;
+                document.getElementById('operationRecordsTab').setAttribute('aria-selected', String(!performanceTab));
+                document.getElementById('performanceRecordsTab').setAttribute('aria-selected', String(performanceTab));
+                if (performanceTab) this.renderPerformanceRecords(); else this.renderOperationLogs();
+            }
+
             openOperationLogs() {
+                this.selectSystemRecordTab('operations');
                 this.operationLogReturnFocus = document.activeElement;
                 this.renderOperationLogs();
                 document.getElementById('operationLogModal').classList.remove('hidden');
