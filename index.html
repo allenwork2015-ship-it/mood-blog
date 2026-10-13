@@ -120,6 +120,7 @@
     #conflictChoices[hidden], #folderConflictsBtn[hidden], #conflictBackupBtn[hidden] { display:none; }
     #viewContent .journal-photo { margin:10px 0; }
         #viewContent .journal-photo img { display:block; }
+    #viewContent .view-photo-slot { height:clamp(180px,40vh,320px); display:flex; align-items:center; justify-content:center; color:#9a8b7d; font-size:12px; }
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
@@ -395,7 +396,7 @@
                 <section class="space-y-2" aria-labelledby="localStorageTitle">
                     <h4 id="localStorageTitle" class="font-semibold">操作日誌</h4>
                     <p class="text-xs text-warm-500">保留最近 100 筆操作結果，不保存日記內文與照片。清除日誌不影響日記或同步識別紀錄。</p>
-                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button><button onclick="app.viewConflictBackups().catch(e=>app.showToast(e.message,'error'))" class="border rounded-full px-3 py-2 text-xs">衝突版本備份</button>
+                    <button onclick="app.clearOperationLogs()" class="border rounded-full px-3 py-2 text-xs">清除日誌</button><button onclick="app.openOperationLogs()" class="border rounded-full px-3 py-2 text-xs">查看日誌</button><button onclick="app.viewConflictBackups().catch(e=>app.showToast(e.message,'error'))" class="border rounded-full px-3 py-2 text-xs">衝突版本備份</button><button onclick="app.openPerformanceRecords()" class="border rounded-full px-3 py-2 text-xs">效能紀錄</button>
                 </section>
                 <div class="space-y-2">
 <label class="flex items-center gap-2"><input id="folderSyncEnabled" type="checkbox" onchange="app.setFolderSyncEnabled(this.checked)"><span>自動同步本機與雲端</span></label>
@@ -496,7 +497,8 @@
                         ['viewModal', () => this.closeViewModal()],
                         ['settingsModal', () => this.closeSettings()],
                         ['operationLogModal', () => this.closeOperationLogs()],
-                        ['conflictModal', () => this.closeConflictModal()]
+                        ['conflictModal', () => this.closeConflictModal()],
+                        ['performanceModal', () => this.closePerformanceRecords()]
                     ];
                     const visible = dialogs.filter(([id]) => !document.getElementById(id).classList.contains('hidden'));
                     if (!visible.length) return;
@@ -1063,7 +1065,7 @@
                         html += `
                             <article onclick="app.openViewModal('${post.id}')" class="bg-white dark:bg-darkCard border border-warm-200/80 dark:border-darkBorder rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between cursor-pointer group">
                                 <div>
-                                    ${post.coverImage ? `<div class="mb-4 rounded-2xl overflow-hidden h-38 sm:h-40 bg-warm-50 dark:bg-stone-900 border border-warm-100 dark:border-darkBorder"><img src="${post.coverImage}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"></div>` : ''}
+                                    ${post.coverImage || post.driveCoverPath ? `<div class="mb-4 rounded-2xl overflow-hidden h-38 sm:h-40 bg-warm-50 dark:bg-stone-900 border border-warm-100 dark:border-darkBorder"><img src="${post.coverImage || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E'}" alt="日記封面" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"></div>` : ''}
                                     <div class="flex items-center justify-between mb-3">
                                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${mood.color}">
                                             <span>${mood.emoji}</span>
@@ -1292,14 +1294,18 @@
                 document.getElementById('viewDate').textContent = post.date;
                 document.getElementById('viewTitle').textContent = post.title;
 
+                this.viewPhotoSpecs = [];
                 let parsedContent = escapeHtml(post.content).replace(/!\[(.*?)\]\(((?:[^()]|\([^()]*\))*)\)/g, (tag, alt, source) => {
                     let path = source;
                     try { path = decodeURIComponent(source); } catch (error) {}
                     path = path.replace(/^\.\//, '');
                     const key = Object.keys(post.imagesMap || {}).find(name => escapeHtml(name) === path);
                     const url = key === undefined ? null : post.imagesMap[key];
-                    if (!url) return key === undefined && Object.keys(post.driveImages || {}).some(name => escapeHtml(name) === path) ? '<div class="my-4 p-4 text-sm text-warm-500">照片載入中…</div>' : tag;
-                    return `<div class="journal-photo my-2 rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900"><img src="${url}" alt="${alt}" class="w-full h-auto object-contain max-h-[400px] sm:max-h-[500px] mx-auto"></div>`;
+                    const remotePath = Object.keys(post.driveImages || {}).find(name => escapeHtml(name) === path);
+                    if (!url && remotePath === undefined) return tag;
+                    const index = this.viewPhotoSpecs.length;
+                    this.viewPhotoSpecs.push({path:key ?? remotePath,url,remoteId:post.driveImages?.[remotePath],alt});
+                    return '<div class="journal-photo view-photo-slot rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900" data-view-photo="'+index+'" role="group" aria-label="照片">照片待載入</div>';
                 });
 
                 document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>').replace(/(?:<br>\s*)+(<div class="journal-photo)/g, '$1').replace(/(<\/div>)(?:<br>\s*)+/g, '$1');
@@ -1325,20 +1331,11 @@
                 document.getElementById('viewEditBtn').textContent = entry?.status === 'synced' ? '編輯雲端日記' : '編輯日記';
                 document.getElementById('viewDeleteBtn').textContent = entry?.status === 'synced' ? '移除此裝置副本' : '刪除日記';
                 document.getElementById('viewModal').classList.remove('hidden');
-                if (Object.keys(post.driveImages || {}).some(path => !post.imagesMap[path])) {
-                    this.loadViewImages(post).then(() => {
-                        if (this.viewPostId === postId && this.viewGeneration === viewGeneration && this.posts.includes(post)) {
-                            const scroll = document.getElementById('viewContent').parentElement;
-                            const position = scroll.scrollTop;
-                            this.openViewModal(postId); scroll.scrollTop = position;
-                        }
-                    }).catch(error => {
-                        if (this.viewPostId === postId) this.showToast('部分照片載入失敗，請關閉文章後重試：' + error.message, 'error');
-                    });
-                }
+                this.installViewPhotoLoading(post, viewGeneration);
             }
 
             closeViewModal() {
+                this.viewPhotoObserver?.disconnect();
                 this.viewPostId = null; this.viewGeneration = (this.viewGeneration || 0) + 1;
                 this.releasePostImages(this.retiredViewPosts || []); this.retiredViewPosts = [];
                 document.getElementById('viewModal').classList.add('hidden');
@@ -2293,6 +2290,8 @@
     <script src="./folder-sync.js"></script>
     <script src="./conflict-ui.js"></script>
     <script src="./performance.js"></script>
+    <script src="./diagnostics.js"></script>
+    <script src="./lazy-photos.js"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
