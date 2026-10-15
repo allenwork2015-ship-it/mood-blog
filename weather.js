@@ -27,6 +27,8 @@
 
                 this.apiWeatherCode = 0; 
                 this.apiIsDay = null; 
+                this.weatherLocation = {lat:25.04,lon:121.56};
+                this.solarDays = [];
                 
                 this.initSize();
                 window.addEventListener('resize', () => this.initSize());
@@ -59,21 +61,65 @@
             }
 
             async queryOpenMeteo(lat, lon) {
+                if(this.weatherRequest){
+                    await this.weatherRequest;
+                    if(this.weatherLocation.lat===lat&&this.weatherLocation.lon===lon)return;
+                    return this.queryOpenMeteo(lat,lon);
+                }
+                if(this.weatherLocation.lat!==lat||this.weatherLocation.lon!==lon){this.solarDays=[];this.solarTimes=null;}
+                this.weatherLocation={lat,lon};
+                this.lastWeatherAttempt=Date.now();
+                const request=this.loadWeather(lat,lon);
+                this.weatherRequest=request;
+                try{return await request;}finally{this.weatherRequest=null;}
+            }
+
+            async loadWeather(lat, lon) {
                 try {
                     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code,is_day&daily=sunrise,sunset&timezone=Asia%2FTaipei`, {signal:AbortSignal.timeout(8000)});
+                    if(!res.ok)throw new Error('weather unavailable');
                     const data = await res.json();
                     if (data && data.current) {
                         this.apiWeatherCode = data.current.weather_code;
                         this.apiIsDay = data.current.is_day === 1;
-                        if(data.daily?.time?.[0] && data.daily.sunrise?.[0] && data.daily.sunset?.[0]) {
-                            const sunrise=Date.parse(data.daily.sunrise[0]+'+08:00'),sunset=Date.parse(data.daily.sunset[0]+'+08:00');
-                            if(Number.isFinite(sunrise)&&Number.isFinite(sunset))this.solarTimes={date:data.daily.time[0],sunrise,sunset};
-                        }
+                        this.solarDays=(data.daily?.time||[]).map((date,i)=>({date,sunrise:Date.parse(data.daily.sunrise?.[i]+'+08:00'),sunset:Date.parse(data.daily.sunset?.[i]+'+08:00')})).filter(d=>Number.isFinite(d.sunrise)&&Number.isFinite(d.sunset)&&d.sunrise<d.sunset);
+                        this.selectSolarDay();
+                        try{localStorage.setItem('shiguang_solar_days',JSON.stringify({lat,lon,days:this.solarDays}));}catch(error){}
+                        this.lastWeatherSuccess=Date.now();
                         if (this.weatherMode === 'auto') {
                             this.initElements();
                         }
                     }
                 } catch (e) {}
+                this.updateSolarHint();
+            }
+
+            selectSolarDay() {
+                const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+                this.solarTimes=this.solarDays.find(d=>d.date===today)|| (this.solarTimes?.date===today?this.solarTimes:null);
+                return today;
+            }
+
+            ensureSolarTimes() {
+                if(this.weatherMode!=='auto')return;
+                if(!this.solarDays.length){
+                    try{
+                        const cache=JSON.parse(localStorage.getItem('shiguang_solar_days')||'null');
+                        const {lat,lon}=this.weatherLocation;
+                        if(cache?.lat===lat&&cache.lon===lon&&Array.isArray(cache.days))this.solarDays=cache.days.slice(0,7).filter(d=>Number.isFinite(d.sunrise)&&Number.isFinite(d.sunset)&&d.sunrise<d.sunset);
+                    }catch(error){}
+                }
+                this.selectSolarDay();this.updateSolarHint();
+                if(navigator.onLine&&!this.weatherRequest&&(!this.lastWeatherAttempt||Date.now()-this.lastWeatherAttempt>=900000)&&(!this.solarTimes||!this.lastWeatherSuccess||Date.now()-this.lastWeatherSuccess>=3600000)){
+                    const {lat,lon}=this.weatherLocation;this.queryOpenMeteo(lat,lon);
+                }
+            }
+
+            updateSolarHint() {
+                const el=document.getElementById('weatherLocationHint');if(!el)return;
+                const place=this.weatherLocation.lat===25.04&&this.weatherLocation.lon===121.56?'臺北':'所選地點';
+                const clock=value=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(value);
+                el.textContent=this.solarTimes?`${place}今日：日出 ${clock(this.solarTimes.sunrise)}、日落 ${clock(this.solarTimes.sunset)}（臺北時間）；自動情境依此切換。`:'暫無今日的日出、日落資料，先採季節估計時間；連網後會自動重試。';
             }
 
             getCurrentScenario() {
@@ -417,9 +463,9 @@
     const initElements=engine.initElements.bind(engine);
     engine.initElements=()=>{initElements();engine.updateCelestialPosition();const scene=engine.getCurrentScenario();engine.renderedScene=scene.type+':'+scene.isNight+':'+ShiguangMoon.lunar(new Date()).day;if(app.weatherMode!=='off'&&app.themeMode==='auto')document.documentElement.classList.toggle('dark',engine.getCurrentScenario().isNight);};
   }
-  engine.setThemeMode(app.themeMode);engine.setWeatherMode(mode);app.applyTheme();app.updateSettingsUI();resume();
+  engine.setThemeMode(app.themeMode);engine.setWeatherMode(mode);engine.ensureSolarTimes();app.applyTheme();app.updateSettingsUI();resume();
  };
- app.fetchWeatherLocation=()=>{app.setWeatherMode('auto');engine.fetchLocalWeather();document.getElementById('weatherLocationHint').textContent='定位失敗時採臺北天氣；天氣服務不可用時採本機時間與晴天情境。';};
+ app.fetchWeatherLocation=()=>{app.setWeatherMode('auto');engine.fetchLocalWeather();};
  const applyTheme=app.applyTheme.bind(app);
  app.applyTheme=()=>{
   applyTheme();
@@ -438,12 +484,14 @@
  };
  app.refreshWeatherClock=()=>{
   if(!engine||app.weatherMode==='off'||document.hidden)return;
+  engine.ensureSolarTimes();
   const scene=engine.getCurrentScenario(),key=scene.type+':'+scene.isNight+':'+ShiguangMoon.lunar(new Date()).day;
   if(engine.renderedScene!==key)engine.initElements();
   if(app.weatherMode==='auto')app.applyTheme();
  };
  setInterval(()=>app.refreshWeatherClock(),30000);
  window.addEventListener('focus',()=>app.refreshWeatherClock());
+ window.addEventListener('online',()=>app.refreshWeatherClock());
  document.addEventListener('visibilitychange',resume);reduced.addEventListener('change',resume);
  let mode='off';try{mode=localStorage.getItem('shiguang_weather_mode')||'off';}catch(error){}
  app.setWeatherMode(modes.includes(mode)?mode:'off');

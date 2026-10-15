@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="icon" href="favicon.ico?v=06" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=06">
-    <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png?v=06">
-    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=06">
+    <link rel="icon" href="favicon.ico?v=08" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=08">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png?v=08">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=08">
     <meta name="theme-color" content="#695b4e">
     <title>拾光手札 - MOOD & BLOG JOURNAL</title>
     <!-- Tailwind CSS CDN -->
@@ -241,7 +241,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 06</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 08</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -395,7 +395,7 @@
                     <p class="text-xs text-warm-500">設定只存於此瀏覽器。填入筆記資料夾後登入；需有編輯權限，刪除會移至雲端垃圾桶。</p>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="app.saveDriveConfig()" class="px-3 py-2 rounded-lg bg-warm-200 dark:bg-stone-700">儲存設定</button>
-                        <button onclick="app.connectDrive()" class="px-3 py-2 rounded-lg bg-warm-800 text-white">登入並連接</button>
+                        <button onclick="app.connectDrive()" data-drive-connect class="px-3 py-2 rounded-lg bg-warm-800 text-white">登入並連接</button>
                         <button onclick="app.refreshDrive()" class="px-3 py-2 rounded-lg border">更新雲端列表</button>
                         <button onclick="app.disconnectConnections()" class="px-3 py-2 rounded-lg border">中斷連線</button>
                     </div>
@@ -416,7 +416,7 @@
                     <select id="weatherScene" onchange="app.setWeatherMode(this.value)" class="w-full p-2 rounded-lg border bg-warm-50 dark:bg-stone-900"><option value="off">關閉</option><option value="auto">自動（日夜與已取得的天氣）</option><option value="sunny_day">白天晴朗</option><option value="sunny_night">黑夜星空、月相與彗星</option><option value="drizzle_day">白天毛毛雨</option><option value="drizzle_night">黑夜毛毛雨</option><option value="storm_day">白天雷雨</option><option value="storm_night">黑夜雷雨</option><option value="snow_day">白天下雪與積雪</option><option value="snow_night">黑夜下雪與積雪</option></select>
                     <p id="weatherStatusText" class="text-xs mt-2" role="status">動態天象已關閉</p>
                     <button onclick="app.fetchWeatherLocation()" class="border rounded-full px-3 py-2 text-xs mt-2">取得所在地天氣</button>
-                    <p id="weatherLocationHint" class="text-xs mt-2 text-warm-500">點選後才要求定位並向 Open-Meteo 查詢天氣；不影響日記與雲端連線。動畫遵循減少動態效果設定。</p>
+                    <p id="weatherLocationHint" class="text-xs mt-2 text-warm-500">自動情境預設取得臺北每日的日出、日落與天氣；點選後才要求定位。動畫遵循減少動態效果設定。</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-warm-600 dark:text-stone-400 uppercase tracking-wider mb-2">文章列表檢視</label>
@@ -425,7 +425,7 @@
                         <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
                     </div>
                 </div>
-                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 06｜更新日期：2026-10-15</p>
+                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 08｜更新日期：2026-10-15</p>
             </div>
         </div>
     </div>
@@ -1736,11 +1736,11 @@
                     if (!pending.length) return this.showToast('沒有待同步的離線日記');
                     if (!pending.some(e => e.rootId === this.driveRoot.id && e.clientId === this.getDriveConfig().clientId)) return this.showToast('待傳日記綁定其他資料夾，請切回原設定後同步', 'error');
                 }
-                if (this.repairBusy || this.offlineSyncing || this.driveBusy || !navigator.onLine || !this.driveRoot || this.driveReadOnly || !this.driveToken || Date.now() >= this.driveExpires) return;
+                if (this.repairBusy || this.offlineSyncing || this.driveBusy || !navigator.onLine || !this.driveRoot || this.driveReadOnly || !this.driveToken || Date.now() >= this.driveExpires) return {skipped: this.repairBusy ? '照片修復中' : this.offlineSyncing ? '待傳同步中' : this.driveBusy ? '其他雲端工作進行中' : !navigator.onLine ? '網路離線' : !this.driveRoot ? '尚未連接雲端' : this.driveReadOnly ? '沒有寫入權限' : '授權已失效'};
                 const perform = async () => {
-                    if (this.offlineSyncing || this.driveBusy) return;
+                    if (this.offlineSyncing || this.driveBusy) return {skipped:'其他雲端工作進行中'};
                     const waiting = (await this.offlineStore('all')).some(e => e.status !== 'synced' && !e.conflict && e.id !== this.offlineEditingId && e.rootId === this.driveRoot?.id && e.clientId === this.getDriveConfig().clientId);
-                    if (!waiting || this.driveBusy || this.offlineSyncing) return;
+                    if (!waiting || this.driveBusy || this.offlineSyncing) return {skipped: !waiting ? '沒有可上傳的待傳資料' : '其他雲端工作進行中'};
                     this.offlineSyncing = true; this.driveBusy = true;
                     let changed = false;
                     try {
@@ -1794,7 +1794,7 @@
                         if (remaining.some(e => e.status !== 'synced' && !e.conflict && e.id !== this.offlineEditingId && !e.error && e.rootId === this.driveRoot?.id && e.clientId === this.getDriveConfig().clientId)) setTimeout(() => this.syncOffline(), 500);
                     }
                 };
-                if (navigator.locks) return navigator.locks.request('shiguang-offline-sync', {ifAvailable:true}, lock => lock ? perform() : undefined);
+                if (navigator.locks) return navigator.locks.request('shiguang-offline-sync', {ifAvailable:true}, lock => lock ? perform() : {skipped:'其他分頁正在同步'});
                 return perform();
             }
 
@@ -1846,20 +1846,35 @@
             }
 
             async connectDrive(resume = null) {
-                if (this.driveBusy) return this.showToast('雲端操作進行中，請稍候再試', 'error');
+                if (this.driveBusy) return {skipped: this.connectionStage || '其他雲端工作進行中'};
                 const config = this.getDriveConfig();
                 if (!config.clientId || !config.folderId) { this.openSettings(); this.showToast('請先儲存 Google Drive 設定', 'error'); return; }
                 if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return this.showToast('請由 GitHub Pages 的 HTTPS 網址登入 Google Drive', 'error');
+                if (!resume) {
+                    try {
+                        const saved = JSON.parse(sessionStorage.getItem('shiguang_drive_session') || 'null');
+                        if (saved?.clientId === config.clientId && saved.folderId === config.folderId && typeof saved.token === 'string' && saved.expires > Date.now() && saved.expires <= Date.now() + 3600000) resume = saved;
+                    } catch (error) {}
+                }
+                if (this.driveRoot?.id === config.folderId && this.driveConnectionClientId === config.clientId && this.driveToken && Date.now() < this.driveExpires) {
+                    this.showSource('drive');
+                    return {skipped:'沿用有效連線'};
+                }
                 if (!resume && !window.google?.accounts?.oauth2) return this.showToast('Google 登入元件尚未載入，請稍後重試或檢查網路', 'error');
                 this.driveBusy = true;
+                this.setConnectionStage(resume ? '恢復連線中' : '等待 Google 登入');
                 try {
                     const response = resume ? {access_token: resume.token, expires_in: (resume.expires - Date.now() + 30000) / 1000} : await this.requestDriveAuthorization(config);
                     if (!resume && !window.google.accounts.oauth2.hasGrantedAllScopes(response, 'https://www.googleapis.com/auth/drive')) throw new Error('需要 Google Drive 讀寫授權');
                     this.driveToken = response.access_token;
+                    this.driveConnectionClientId = config.clientId;
                     this.driveExpires = Date.now() + Number(response.expires_in) * 1000 - 30000;
+                    try { sessionStorage.setItem('shiguang_drive_session', JSON.stringify({token:this.driveToken, expires:this.driveExpires, clientId:config.clientId, folderId:config.folderId})); } catch (error) {}
+                    this.setConnectionStage('讀取雲端資料夾');
                     const root = await this.driveRequest('files/' + encodeURIComponent(config.folderId) + '?fields=id,name,mimeType,capabilities,trashed&supportsAllDrives=true');
                     if (root.trashed || root.mimeType !== 'application/vnd.google-apps.folder') throw new Error('指定目錄不是可使用的資料夾');
                     // Commit the source only after the entire folder has loaded successfully.
+                    this.setConnectionStage('載入日記中');
                     const posts = await this.fetchDrivePosts(root.id);
                     if (this.sourceMode !== 'drive' || this.driveRoot?.id !== root.id) this.closeEditor();
                     this.closeViewModal(); this.releasePostImages(this.drivePosts);
@@ -1871,8 +1886,8 @@
                     
                     this.checkPlatform(); this.renderPosts(); this.updateStats(); this.closeSettings(); this.scheduleFolderAutoSync();
                     this.showToast(`已連接 Google Drive，載入 ${posts.length} 篇日記`);
-                } catch (error) { this.showToast(error.message, 'error'); }
-                finally { this.driveBusy = false; }
+                } catch (error) { this.showToast(error.message, 'error'); return {failed: /逾時/.test(error.message) ? '登入或連線逾時' : error.status === 401 ? '授權失效' : '連線失敗'}; }
+                finally { this.driveBusy = false; this.setConnectionStage(''); this.checkPlatform(); }
                 if (this.driveRoot) this.syncOffline();
             }
 
