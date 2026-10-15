@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="favicon.ico?v=06" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=06">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png?v=06">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=06">
     <meta name="theme-color" content="#695b4e">
     <title>拾光手札 - MOOD & BLOG JOURNAL</title>
     <!-- Tailwind CSS CDN -->
@@ -119,7 +123,8 @@
         .dark #viewLocalSourceBtn[aria-pressed="true"], .dark #viewDriveSourceBtn[aria-pressed="true"] { background: #d6c9bc; color: #292524; border-color: #d6c9bc; }
     #conflictChoices[hidden], #folderConflictsBtn[hidden], #conflictBackupBtn[hidden] { display:none; }
     #viewContent .journal-photo { margin:10px 0; }
-        #viewContent .journal-photo img { display:block; }
+        #viewContent .journal-photo img { display:block; width:100%; height:auto; border:0; }
+        #viewContent .view-photo-slot[data-loaded="true"] { height:auto; display:block; }
     #viewContent .view-photo-slot { height:clamp(180px,40vh,320px); display:flex; align-items:center; justify-content:center; color:#9a8b7d; font-size:12px; }
     #operationRecordsPanel[hidden], #performanceRecordsPanel[hidden] { display:none; }
         .system-record-tab[aria-selected="true"] { background:#68594b;color:white; }
@@ -128,6 +133,7 @@
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
+<script src="./moon-phase.js"></script>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
 
@@ -235,7 +241,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 01</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 06</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -419,7 +425,7 @@
                         <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
                     </div>
                 </div>
-                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 01｜更新日期：2026-10-13</p>
+                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 06｜更新日期：2026-10-15</p>
             </div>
         </div>
     </div>
@@ -1271,7 +1277,7 @@
                     if (!url && remotePath === undefined) return tag;
                     const index = this.viewPhotoSpecs.length;
                     this.viewPhotoSpecs.push({path:key ?? remotePath,url,remoteId:post.driveImages?.[remotePath],alt});
-                    return '<div class="journal-photo view-photo-slot rounded-2xl overflow-hidden border border-warm-200 dark:border-darkBorder bg-warm-50 dark:bg-stone-900" data-view-photo="'+index+'" role="group" aria-label="照片">照片待載入</div>';
+                    return '<div class="journal-photo view-photo-slot overflow-hidden" data-view-photo="'+index+'" role="group" aria-label="照片">照片待載入</div>';
                 });
 
                 document.getElementById('viewContent').innerHTML = parsedContent.replace(/\n/g, '<br>').replace(/(?:<br>\s*)+(<div class="journal-photo)/g, '$1').replace(/(<\/div>)(?:<br>\s*)+/g, '$1');

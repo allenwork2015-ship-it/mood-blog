@@ -1,11 +1,5 @@
 (() => {
-        function getLunarDay(date) {
-            const baseDate = new Date(2026, 0, 19); 
-            const diffDays = Math.floor((date - baseDate) / (1000 * 60 * 60 * 24));
-            let lunarDay = (diffDays % 29.53) + 1;
-            if (lunarDay < 1) lunarDay += 29.53;
-            return Math.floor(lunarDay % 30) || 30;
-        }
+        function getLunarDay(date) { return ShiguangMoon.lunar(date).day; }
 
         class WeatherBackgroundEngine {
             constructor() {
@@ -66,11 +60,15 @@
 
             async queryOpenMeteo(lat, lon) {
                 try {
-                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code,is_day&timezone=auto`, {signal:AbortSignal.timeout(8000)});
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code,is_day&daily=sunrise,sunset&timezone=Asia%2FTaipei`, {signal:AbortSignal.timeout(8000)});
                     const data = await res.json();
                     if (data && data.current) {
                         this.apiWeatherCode = data.current.weather_code;
                         this.apiIsDay = data.current.is_day === 1;
+                        if(data.daily?.time?.[0] && data.daily.sunrise?.[0] && data.daily.sunset?.[0]) {
+                            const sunrise=Date.parse(data.daily.sunrise[0]+'+08:00'),sunset=Date.parse(data.daily.sunset[0]+'+08:00');
+                            if(Number.isFinite(sunrise)&&Number.isFinite(sunset))this.solarTimes={date:data.daily.time[0],sunrise,sunset};
+                        }
                         if (this.weatherMode === 'auto') {
                             this.initElements();
                         }
@@ -93,14 +91,13 @@
                 if (this.themeMode === 'dark') isNight = true;
                 else if (this.themeMode === 'light') isNight = false;
                 else {
-                    if (this.apiIsDay !== null) {
-                        isNight = !this.apiIsDay;
-                    } else {
-                        const hour = new Date().getHours();
-                        const month = new Date().getMonth() + 1;
-                        const sunsetHour = (month >= 5 && month <= 8) ? 19 : (month >= 11 || month <= 2) ? 17.5 : 18;
-                        isNight = hour >= sunsetHour || hour < 6;
-                    }
+                    const now = new Date();
+                    const parts = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(now);
+                    const value = type => Number(parts.find(p=>p.type===type).value);
+                    const hour=value('hour')+value('minute')/60, month=value('month');
+                    const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+                    if(this.solarTimes?.date===today) isNight=now.getTime()<this.solarTimes.sunrise || now.getTime()>=this.solarTimes.sunset;
+                    else {const sunsetHour=(month>=5&&month<=8)?19:(month>=11||month<=2)?17.5:18;isNight=hour>=sunsetHour||hour<6;}
                 }
 
                 let type = 'sunny';
@@ -146,22 +143,10 @@
                         }
 
                         const lunarDay = getLunarDay(new Date());
-                        let moonShadowStyle = 'inset_-12px_-4px_0px_0px_#fde047'; 
-                        let phaseName = `農曆初${lunarDay} 滿月`;
-                        if (lunarDay <= 3 || lunarDay >= 28) {
-                            moonShadowStyle = 'inset_-3px_-1px_0px_0px_#fde047'; phaseName = `農曆初${lunarDay} 蛾眉月`;
-                        } else if (lunarDay > 3 && lunarDay <= 9) {
-                            moonShadowStyle = 'inset_-8px_-2px_0px_0px_#fde047'; phaseName = `農曆初${lunarDay} 上弦月`;
-                        } else if (lunarDay > 9 && lunarDay <= 19) {
-                            moonShadowStyle = 'inset_-1px_-1px_0px_0px_#fde047'; phaseName = `農曆十五 滿月`;
-                        } else if (lunarDay > 19 && lunarDay <= 23) {
-                            moonShadowStyle = 'inset_8px_2px_0px_0px_#fde047'; phaseName = `農曆廿二 下弦月`;
-                        } else {
-                            moonShadowStyle = 'inset_4px_1px_0px_0px_#fde047'; phaseName = `農曆廿七 殘月`;
-                        }
-
+                        const phaseName = '農曆 '+lunarDay+' 日 '+ShiguangMoon.name(lunarDay);
                         this.celestialEl = document.createElement('div');
-                        this.celestialEl.className = `absolute w-16 h-16 rounded-full shadow-[${moonShadowStyle}] opacity-95 pointer-events-none transition-transform duration-1000`;
+                        this.celestialEl.className = 'absolute w-16 h-16 pointer-events-none';
+                        const moon=document.createElement('canvas');moon.width=128;moon.height=128;moon.style.cssText='width:64px;height:64px';ShiguangMoon.draw(moon,lunarDay);this.celestialEl.append(moon);
                         if (this.celestialContainer) this.celestialContainer.appendChild(this.celestialEl);
 
                         for (let i = 0; i < 2; i++) {
@@ -245,6 +230,17 @@
                 }
             }
 
+            updateCelestialPosition(date = new Date()) {
+                const scenario = this.getCurrentScenario();
+                if (!this.celestialEl || scenario.type !== 'sunny') return;
+                const clock = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(date).split(':').map(Number);
+                const hours = clock[0] + clock[1]/60 + clock[2]/3600;
+                const elapsed = scenario.isNight ? (hours - 18 + 24) % 24 : hours - 6;
+                const progress = Math.max(0, Math.min(1, elapsed / 12));
+                this.celestialEl.style.left = (progress * this.width) + 'px';
+                this.celestialEl.style.top = (240 - 80 * Math.sin(progress * Math.PI)) + 'px';
+            }
+
             startLoop() {
                 if (this.isRunning) return;
                 this.isRunning = true;
@@ -272,15 +268,7 @@
                         }
                     }
 
-                    if (this.celestialEl && type === 'sunny' && !isNight) {
-                        const now = new Date();
-                        const hours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
-                        let progress = Math.max(0, Math.min(1, (hours - 6) / 12));
-                        const x = progress * this.width;
-                        const y = 240 - 80 * Math.sin(progress * Math.PI);
-                        this.celestialEl.style.left = `${x}px`;
-                        this.celestialEl.style.top = `${y}px`;
-                    }
+                    this.updateCelestialPosition();
 
                     if (type === 'drizzle' || type === 'storm') {
                         this.intensityTimer += 0.03;
@@ -416,7 +404,7 @@
  const modes=['off','auto','sunny_day','sunny_night','drizzle_day','drizzle_night','storm_day','storm_night','snow_day','snow_night'];
  let engine=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- const resume=()=>{ if(!engine)return;engine.stopLoop();if(app.weatherMode!=='off'&&!document.hidden&&!reduced.matches)engine.startLoop(); };
+ const resume=()=>{ if(!engine)return;app.refreshWeatherClock();engine.stopLoop();if(app.weatherMode!=='off'&&!document.hidden&&!reduced.matches)engine.startLoop(); };
  app.setWeatherMode=mode=>{
   if(!modes.includes(mode))return;
   app.weatherMode=mode;
@@ -427,7 +415,7 @@
   if(mode==='off'){engine?.stopLoop();document.getElementById('weatherStatusText').textContent='動態天象已關閉';return;}
   if(!engine){engine=new WeatherBackgroundEngine();
     const initElements=engine.initElements.bind(engine);
-    engine.initElements=()=>{initElements();if(app.weatherMode!=='off'&&app.themeMode==='auto')document.documentElement.classList.toggle('dark',engine.getCurrentScenario().isNight);};
+    engine.initElements=()=>{initElements();engine.updateCelestialPosition();const scene=engine.getCurrentScenario();engine.renderedScene=scene.type+':'+scene.isNight+':'+ShiguangMoon.lunar(new Date()).day;if(app.weatherMode!=='off'&&app.themeMode==='auto')document.documentElement.classList.toggle('dark',engine.getCurrentScenario().isNight);};
   }
   engine.setThemeMode(app.themeMode);engine.setWeatherMode(mode);app.applyTheme();app.updateSettingsUI();resume();
  };
@@ -448,6 +436,14 @@
    app.setWeatherMode(mode==='auto'?'auto':base+(mode==='dark'?'_night':'_day'));
   }
  };
+ app.refreshWeatherClock=()=>{
+  if(!engine||app.weatherMode==='off'||document.hidden)return;
+  const scene=engine.getCurrentScenario(),key=scene.type+':'+scene.isNight+':'+ShiguangMoon.lunar(new Date()).day;
+  if(engine.renderedScene!==key)engine.initElements();
+  if(app.weatherMode==='auto')app.applyTheme();
+ };
+ setInterval(()=>app.refreshWeatherClock(),30000);
+ window.addEventListener('focus',()=>app.refreshWeatherClock());
  document.addEventListener('visibilitychange',resume);reduced.addEventListener('change',resume);
  let mode='off';try{mode=localStorage.getItem('shiguang_weather_mode')||'off';}catch(error){}
  app.setWeatherMode(modes.includes(mode)?mode:'off');

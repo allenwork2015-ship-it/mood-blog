@@ -8,11 +8,11 @@
   const paint=(node,spec,url)=>{
    if(!valid())return;
    node.textContent='';const image=document.createElement('img');image.alt=spec.alt;image.className='w-full h-full object-contain';
-   image.onload=()=>{if(valid())node.setAttribute('aria-label','照片：'+spec.alt);};
+   image.onload=()=>{if(valid()){node.dataset.loaded='true';node.setAttribute('aria-label','照片：'+spec.alt);}};
    image.onerror=()=>failure(node,spec,'照片無法顯示');node.append(image);image.src=url;
   };
   const failure=(node,spec,message)=>{
-   if(!valid())return;node.textContent=message+'，可重試。';const button=document.createElement('button');button.textContent='重試照片';button.className='border rounded-full px-3 py-2 m-2 text-xs';button.onclick=()=>{if(spec.path)delete post.imagesMap[spec.path];spec.url=null;enqueue(node,spec);};node.append(button);
+   if(!valid())return;delete node.dataset.loaded;node.textContent=message+'，可重試。';const button=document.createElement('button');button.textContent='重試照片';button.className='border rounded-full px-3 py-2 m-2 text-xs';button.onclick=()=>{if(spec.path)delete post.imagesMap[spec.path];spec.url=null;enqueue(node,spec);};node.append(button);
   };
   const drain=()=>{
    while(workers<2&&queue.length&&valid()){

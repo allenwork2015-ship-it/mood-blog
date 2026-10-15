@@ -1,9 +1,9 @@
-拾光手札 Ver 01｜2026-10-13
+拾光手札 Ver 06｜2026-10-15
 
 部署
 將完整套件放在 GitHub Pages 同一目錄，不要只換 index.html：
 index.html、folder-sync.js、conflict-ui.js、performance.js、diagnostics.js、lazy-photos.js、photo-compression.js、weather.js、weather.css、sw.js、manifest.webmanifest、icon.svg、完整設定說明.html，以及 assets／webfonts 資料夾。
-上傳後正常重新整理，確認設定顯示 Ver 01。若仍有待傳日記，不要清除網站資料。
+上傳後正常重新整理，確認設定顯示 Ver 06。若仍有待傳日記，不要清除網站資料。
 
 使用
 手機：設定雲端筆記資料夾並登入；LINE 內建瀏覽器請改用 Safari 或 Chrome 新分頁。
@@ -23,3 +23,8 @@ index.html、folder-sync.js、conflict-ui.js、performance.js、diagnostics.js�
 動態天象預設關閉，與外觀日夜連動；點取得所在地天氣才要求定位。
 目前沒有完整雲端離線閱讀、共享日記或留言功能。
 正式版本從 Ver 01 開始；每次正式交付依序加號，更新日期採本次發布日期。離線快取版本另由程式管理。
+
+月相：部署包含 moon-phase.js，農曆日依 Asia/Taipei 換算，亮面為農曆日序示意，不是精密天文計算。moon-phase-demo.html 可演示初一至二十九。
+
+自動天象每 30 秒及返回頁面時檢查臺北日夜；有當日日出日落資料時優先使用，否則依季節時間判斷。不再持續沿用舊 is_day 狀態。
+圖示更新：請上傳 favicon.ico、icon-16.png、icon-32.png、icon-180.png、icon-192.png、icon-512.png 及更新的 icon.svg。舊書籤可能需重新加入才更新。
