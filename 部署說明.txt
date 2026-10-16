@@ -1,4 +1,4 @@
-拾光手札 Ver 08｜2026-10-15
+拾光手札 Ver 09｜2026-10-16
 
 部署
 將完整套件放在 GitHub Pages 同一目錄，不要只換 index.html：
@@ -31,3 +31,5 @@ index.html、folder-sync.js、conflict-ui.js、performance.js、diagnostics.js�
 Ver 07：連線按鈕顯示登入與載入階段，避免重複點擊；沿用有效授權。效能紀錄新增裝置、版本、執行階段、略過原因與進行中工作，減少定時空檢查紀錄。更新 index.html、diagnostics.js、sw.js、完整設定說明.html 與本說明；建議整包覆蓋。
 
 Ver 08：自動動態天象預設查詢臺北每日的日出、日落，加入跨日選取、數日快取及今日時間提示。需更新 weather.js、index.html、sw.js 及手冊；建議整包覆蓋。
+
+Ver 09：修正手機橫向日期與心情欄位重疊；補齊待傳上傳的年份及照片子資料夾固定識別碼、建立回應核對、延後重試及上傳診斷。完整更新與手機測試請看「本次更新說明.txt」。

@@ -21,6 +21,10 @@
   this.performanceRecords.unshift({time:Date.now(),operation:label,milliseconds:Math.round(performance.now()-start),requests:(this.performanceRequestCount||0)-before,result,...environment(),...details});
   this.performanceRecords.length=Math.min(this.performanceRecords.length,100);
  };
+ p.recordUploadDiagnostic=function(result,details={}){
+  const context=this.uploadContext;if(!context)return;
+  this.addPerformanceRecord('待傳上傳診斷',performance.now(),this.performanceRequestCount||0,result,{...context,visibility:document.visibilityState,online:navigator.onLine,authorizationSeconds:Math.max(0,Math.floor(((this.driveExpires||0)-Date.now())/1000)),...details});
+ };
  const toast=p.showToast;
  p.showToast=function(message,type){if(type==='error')this.performanceErrorCount=(this.performanceErrorCount||0)+1;return toast.apply(this,arguments);};
  const raw=p.driveRequestRaw;
@@ -28,11 +32,12 @@
   this.performanceRequestCount=(this.performanceRequestCount||0)+1;
   const method=options.method||'GET';
   const stage=upload?'上傳檔案內容':path.includes('alt=media')?'讀取日記或照片':path.startsWith('files/generateIds')?'建立上傳識別碼':method==='GET'?'讀取雲端檔案資訊':method==='POST'?'建立雲端檔案':'更新雲端檔案';
-  const started=performance.now();
+  const started=performance.now(),context=this.uploadContext?{...this.uploadContext}:{};
+  const state={visibility:document.visibilityState,online:navigator.onLine,authorizationSeconds:Math.max(0,Math.floor(((this.driveExpires||0)-Date.now())/1000))};
   const request={name:'request',operation:stage,time:Date.now(),started,stage,stages:[]};
   this.performanceActive ||= new Map();const key=Symbol();this.performanceActive.set(key,request);
   return raw.apply(this,arguments).catch(error=>{
-   this.addPerformanceRecord(stage,started,(this.performanceRequestCount||0)-1,error.status===401?'授權失效':/逾時/.test(error.message)?'逾時':error.status?'HTTP '+error.status:'連線失敗',{stage});throw error;
+   this.addPerformanceRecord(stage,started,(this.performanceRequestCount||0)-1,error.status===401?'授權失效':/逾時/.test(error.message)?'逾時':error.status?'HTTP '+error.status:'連線失敗',{stage,...context,method,...state,endVisibility:document.visibilityState,endOnline:navigator.onLine,failureKind:error.failureKind||'unknown',status:error.status||null,retryable:!!error.retryable,uncertain:!!error.uncertain});throw error;
   }).finally(()=>this.performanceActive.delete(key));
  };
  for(const [name,label]of Object.entries(labels)){
@@ -65,7 +70,7 @@
   document.getElementById('performanceRows').innerHTML=records.map(r=>{
    const device=r.device?[r.device,r.os,r.browser,r.version].join('／'):'舊紀錄，未記錄裝置';
    const stage=r.stage?'・'+r.stage:'';
-   const busy=r.busyOperation?'・忙碌工作：'+r.busyOperation+'（'+Math.round(r.busyMilliseconds/1000)+' 秒）':'';
+   const busy=(r.busyOperation?'・忙碌工作：'+r.busyOperation+'（'+Math.round(r.busyMilliseconds/1000)+' 秒）':'')+(r.attempt?'・第 '+r.attempt+' 次嘗試':'')+(r.entryId?'・識別碼 '+r.entryId.slice(0,8):'')+(r.retryAt?'・預計重試 '+new Date(r.retryAt).toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei'}):'')+(r.retryManual?'・需手動處理':'');
    return '<div class="border rounded-xl p-3 text-xs"><p>'+escapeHtml(new Date(r.time).toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei'})+'・'+device+'・'+r.operation)+'</p><p>'+escapeHtml(r.milliseconds+' ms・'+(r.requests??'—')+' 次雲端請求・'+r.result+stage+busy)+'</p></div>';
   }).join('')||'目前沒有量測紀錄。';
  };

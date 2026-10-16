@@ -72,7 +72,7 @@
      else if(choice==='both'){this.driveBusy=false;await this.keepConflictCopy(entry.id);this.driveBusy=true;}
      else{
       entry.target={...entry.target,version:state.modifiedTime,folder:active.remote.driveFolder,originalContent:active.remote.content,originalImages:active.remote.driveImages};
-      entry.images=images;entry.remoteImages={};entry.cacheImages={};entry.editImageIds={};entry.published=false;entry.conflict=false;entry.error='';
+      entry.images=images;entry.remoteImages={};entry.cacheImages={};entry.editImageIds={};entry.published=false;entry.conflict=false;entry.error='';entry.retryAt=0;entry.retryManual=false;
       await this.offlineStore('put',entry);await this.applyQueuedEdit(entry);await this.reloadDrivePosts();
      }
      await this.refreshOffline();
