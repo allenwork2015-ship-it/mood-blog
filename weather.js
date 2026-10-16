@@ -1,5 +1,4 @@
 (() => {
-        function getLunarDay(date) { return ShiguangMoon.lunar(date).day; }
 
         class WeatherBackgroundEngine {
             constructor() {
@@ -188,11 +187,11 @@
                             });
                         }
 
-                        const lunarDay = getLunarDay(new Date());
-                        const phaseName = '農曆 '+lunarDay+' 日 '+ShiguangMoon.name(lunarDay);
+                        const moonDate = ShiguangMoon.lunar(new Date()), lunarDay = moonDate.day;
+                        const phaseName = lunarDay ? '農曆 '+lunarDay+' 日 '+ShiguangMoon.name(lunarDay) : '月相日期暫不可用';
                         this.celestialEl = document.createElement('div');
                         this.celestialEl.className = 'absolute w-16 h-16 pointer-events-none';
-                        const moon=document.createElement('canvas');moon.width=128;moon.height=128;moon.style.cssText='width:64px;height:64px';ShiguangMoon.draw(moon,lunarDay);this.celestialEl.append(moon);
+                        const moon=document.createElement('canvas');moon.width=128;moon.height=128;moon.style.cssText='width:64px;height:64px';ShiguangMoon.draw(moon,lunarDay);moon.setAttribute('role','img');moon.setAttribute('aria-label',lunarDay?phaseName:'月相日期暫不可用');moon.dataset.calendarSource=moonDate.source;this.celestialEl.append(moon);
                         if (this.celestialContainer) this.celestialContainer.appendChild(this.celestialEl);
 
                         for (let i = 0; i < 2; i++) {
