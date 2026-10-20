@@ -9,3 +9,19 @@
 @media(max-width:899px){#bookWindow{padding:0}.book-window-panel{width:100%;height:100dvh;max-height:100dvh;border:0;border-radius:0}.book-window-header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px}.book-window-content{padding:6px 4px calc(16px + env(safe-area-inset-bottom));scrollbar-gutter:auto}.book-window-esc{display:none}}
 @supports not(height:100dvh){.book-window-panel{height:calc(100vh - 32px)}@media(max-width:899px){.book-window-panel{height:100vh;max-height:100vh}}}
 
+
+/* Mobile controls follow the reading order shown in the reference. */
+@media(max-width:899px){
+ .book-window-controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 6px;align-items:center;margin:12px 12px 18px;font-size:12px}
+ .book-window-controls .book-home-nav,.book-window-controls .book-home-quick{display:contents}
+ .book-window-controls #bookHomePrev{grid-row:1;grid-column:1/3;justify-self:end}
+ .book-window-controls #bookHomePosition{grid-row:1;grid-column:3/5;text-align:center;white-space:nowrap}
+ .book-window-controls #bookHomeNext{grid-row:1;grid-column:5/7;justify-self:start}
+ .book-window-controls .book-jump-label{grid-row:2;grid-column:1/4;justify-self:end;white-space:nowrap;gap:5px}
+ .book-window-controls #bookHomeJumpGo{grid-row:2;grid-column:4/5;justify-self:start}
+ .book-window-controls #bookHomeCleanEmpty{grid-row:2;grid-column:5/7;justify-self:stretch}
+ .book-window-controls #bookHomeJournal{grid-row:3;grid-column:1/7;width:100%;max-width:none;min-width:0;margin-top:8px;min-height:44px;font-size:16px;padding:8px;border:1px solid #bbaa92;border-radius:12px;background:transparent}
+ .book-window-controls button{min-height:44px;padding:8px 10px;border:1px solid #bbaa92;border-radius:20px;white-space:nowrap}
+ .book-window-controls #bookHomeJumpGo,.book-window-controls #bookHomeCleanEmpty{padding:8px 4px}
+ .book-window-controls .book-jump-label input{width:52px;min-width:0;min-height:44px;font-size:16px}
+}

@@ -6,6 +6,7 @@
  const layer=document.createElement('section');layer.id='bookWindow';layer.hidden=true;layer.setAttribute('role','dialog');layer.setAttribute('aria-modal','true');layer.setAttribute('aria-labelledby','bookWindowTitle');
  layer.innerHTML='<div class="book-window-panel"><header class="book-window-header"><h2 id="bookWindowTitle">日記本</h2><button type="button" id="bookWindowClose">關閉<span class="book-window-esc">（Esc）</span></button></header><p id="bookWindowMessage" role="status" aria-live="polite"></p><div class="book-window-content"></div></div>';
  document.body.append(layer);layer.querySelector('.book-window-content').append(book);
+ const controls=document.createElement('div');controls.className='book-window-controls';const nav=book.querySelector('.book-home-nav'),quick=book.querySelector('.book-home-quick');nav.before(controls);controls.append(nav,quick);
  const closeButton=document.getElementById('bookWindowClose'),message=document.getElementById('bookWindowMessage');
  let closing=false,returnFocus=null,scroll={x:0,y:0},bodyStyle=null,background=[];
  const otherDialog=()=>[...document.querySelectorAll('body>[id$="Modal"]')].some(n=>!n.classList.contains('hidden')&&!n.hidden&&getComputedStyle(n).display!=='none');
