@@ -24,9 +24,8 @@
  let formatter;
  try{formatter=new Intl.DateTimeFormat('en-u-ca-chinese-nu-latn',{calendar:'chinese',numberingSystem:'latn',timeZone:'Asia/Taipei',day:'numeric'});if(formatter.resolvedOptions().calendar!=='chinese')formatter=null;}catch(error){}
  const lunar=date=>{
-  let day=null,label='',source='Intl';
-  try{if(formatter)day=parseDay(formatter.formatToParts(date).find(p=>p.type==='day')?.value);}catch(error){}
-  if(day===null){day=fallbackDay(date);source='離線農曆表';}
+  let day=fallbackDay(date),label='',source='離線農曆表';
+  if(day===null){source='Intl';try{if(formatter)day=parseDay(formatter.formatToParts(date).find(p=>p.type==='day')?.value);}catch(error){}}
   try{const labelFormatter=new Intl.DateTimeFormat('zh-TW-u-ca-chinese',{calendar:'chinese',timeZone:'Asia/Taipei',year:'numeric',month:'long',day:'numeric'});if(labelFormatter.resolvedOptions().calendar==='chinese')label=labelFormatter.format(date);}catch(error){}
   return {day,label:label||(day?'農曆 '+day+' 日':'月相日期暫不可用'),source};
  };
@@ -45,5 +44,29 @@
   ctx.putImageData(data,0,0);canvas.dataset.lunarDay=String(day);
   return Math.round((1-Math.cos(theta))/2*100);
  };
- window.ShiguangMoon={lunar,name,draw};
+ let sequence=0;
+ const create=(value,size=64)=>{
+  const day=parseDay(value)??lunar(new Date()).day;
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 128 128');svg.setAttribute('width',size);svg.setAttribute('height',size);
+  svg.setAttribute('role','img');svg.style.cssText='display:block;flex:none;overflow:visible;color-scheme:only light;isolation:isolate';
+  svg.dataset.rendererVersion='svg-v11';
+  if(day===null){svg.setAttribute('aria-label','月相日期暫不可用');return svg;}
+  svg.dataset.lunarDay=String(day);svg.setAttribute('aria-label','農曆 '+day+' 日 '+name(day));
+  const circle=document.createElementNS(ns,'circle');circle.setAttribute('cx','64');circle.setAttribute('cy','64');circle.setAttribute('r','58.88');circle.setAttribute('fill','#252e41');svg.append(circle);
+  const theta=2*Math.PI*(day-1)/29.53,cos=Math.cos(theta),waxing=Math.sin(theta)>=0;
+  svg.dataset.illumination=String(Math.round((1-cos)/2*100));
+  if(day!==1){
+   const id='shiguang-moon-'+(++sequence),defs=document.createElementNS(ns,'defs'),gradient=document.createElementNS(ns,'radialGradient');
+   for(const [key,val]of Object.entries({id,gradientUnits:'userSpaceOnUse',cx:'64',cy:'64',r:'58.88'}))gradient.setAttribute(key,val);
+   for(const [offset,color]of [['0%','#fde087'],['100%','#cfb86f']]){const stop=document.createElementNS(ns,'stop');stop.setAttribute('offset',offset);stop.setAttribute('stop-color',color);gradient.append(stop);}
+   defs.append(gradient);svg.append(defs);
+   const inner=waxing?cos:-cos,path=document.createElementNS(ns,'path');
+   const terminator=Math.abs(inner)<.000001?'L 64 5.12':`A ${(Math.abs(inner)*58.88).toFixed(5)} 58.88 0 0 ${inner>=0?0:1} 64 5.12`;
+   path.setAttribute('d',`M 64 5.12 A 58.88 58.88 0 0 ${waxing?1:0} 64 122.88 ${terminator} Z`);
+   path.setAttribute('fill','url(#'+id+')');path.dataset.moonLit='true';svg.append(path);
+  }
+  return svg;
+ };
+ window.ShiguangMoon={lunar,name,draw,create,rendererVersion:'svg-v11'};
 })();

@@ -23,7 +23,8 @@
       if(!url){
        if(post.coverPromise&&post.driveCoverPath===spec.path)try{await post.coverPromise;}catch(error){}
        url=post.imagesMap[spec.path];
-       if(!url){const blob=await this.driveRequest('files/'+spec.remoteId+'?alt=media&supportsAllDrives=true',{},'blob');if(!valid())return;url=URL.createObjectURL(blob);post.imagesMap[spec.path]=url;}
+       if(!url&&post.localImagePaths?.[spec.path]){url=await this.loadLocalPhoto(post,spec.path);if(!valid())return;}
+       if(!url&&!post.localImagePaths?.[spec.path]){const blob=await this.driveRequest('files/'+spec.remoteId+'?alt=media&supportsAllDrives=true',{},'blob');if(!valid())return;url=URL.createObjectURL(blob);post.imagesMap[spec.path]=url;}
       }
       paint(node,spec,url);
      }catch(error){failure(node,spec,'照片載入失敗');}

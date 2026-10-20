@@ -1,9 +1,9 @@
-拾光手札 Ver 10｜2026-10-16
+拾光手札 Ver 13｜2026-10-20
 
 部署
 將完整套件放在 GitHub Pages 同一目錄，不要只換 index.html：
-index.html、folder-sync.js、conflict-ui.js、performance.js、diagnostics.js、lazy-photos.js、photo-compression.js、weather.js、weather.css、sw.js、manifest.webmanifest、icon.svg、完整設定說明.html，以及 assets／webfonts 資料夾。
-上傳後正常重新整理，確認設定顯示 Ver 08。若仍有待傳日記，不要清除網站資料。
+index.html、folder-sync.js、conflict-ui.js、performance.js、diagnostics.js、lazy-photos.js、local-folder-loading.js、photo-compression.js、weather.js、weather.css、sw.js、manifest.webmanifest、icon.svg、完整設定說明.html，以及 assets／webfonts 資料夾。
+上傳後正常重新整理，確認設定顯示 Ver 13。若仍有待傳日記，不要清除網站資料。
 
 使用
 手機：設定雲端筆記資料夾並登入；LINE 內建瀏覽器請改用 Safari 或 Chrome 新分頁。
@@ -35,3 +35,9 @@ Ver 08：自動動態天象預設查詢臺北每日的日出、日落，加入�
 Ver 09：修正手機橫向日期與心情欄位重疊；補齊待傳上傳的年份及照片子資料夾固定識別碼、建立回應核對、延後重試及上傳診斷。完整更新與手機測試請看「本次更新說明.txt」。
 
 Ver 10：修正農曆日期格式差異可能造成手機月亮亮面消失的問題，加入拉丁數字、中文日期解析與離線農曆備援，維持原有月相示意與路徑。請完整更新。
+
+Ver 11：月亮改用 SVG 向量繪圖，月相演示同步更新；以共用農曆資料保持裝置一致。月相、天象與診斷程式使用獨立版本網址，離線快取安裝時重新驗證資源。詳見本次更新說明。
+
+Ver 12：本機讀取先載入日記文字，照片按需讀取，新增進度、取消、逾時及診斷。請完整上傳，尤其不可漏掉 local-folder-loading.js。更新步驟請看本次更新說明.txt。本版未加入測試中的日記本模式。
+
+Ver 13：正常本機讀取不顯示下方進度列，超過 8 秒才顯示取消入口；錯誤提示、逾時與診斷保留。

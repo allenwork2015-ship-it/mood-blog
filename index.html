@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="icon" href="favicon.ico?v=10" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=10">
-    <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png?v=10">
-    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=10">
+    <link rel="icon" href="favicon.ico?v=11" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=11">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png?v=11">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=11">
     <meta name="theme-color" content="#695b4e">
     <title>拾光手札 - MOOD & BLOG JOURNAL</title>
     <!-- Tailwind CSS CDN -->
@@ -138,7 +138,7 @@
     </style>
 <link rel="stylesheet" href="./weather.css">
 <script src="./photo-compression.js"></script>
-<script src="./moon-phase.js"></script>
+<script src="./moon-phase.js?v=11"></script>
 </head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
 
@@ -246,7 +246,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 10</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 13</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -430,7 +430,7 @@
                         <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
                     </div>
                 </div>
-                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 10｜更新日期：2026-10-16</p>
+                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 13｜更新日期：2026-10-20</p>
             </div>
         </div>
     </div>
@@ -1278,10 +1278,11 @@
                     path = path.replace(/^\.\//, '');
                     const key = Object.keys(post.imagesMap || {}).find(name => escapeHtml(name) === path);
                     const url = key === undefined ? null : post.imagesMap[key];
+                    const localPath = Object.keys(post.localImagePaths || {}).find(name => escapeHtml(name) === path);
                     const remotePath = Object.keys(post.driveImages || {}).find(name => escapeHtml(name) === path);
-                    if (!url && remotePath === undefined) return tag;
+                    if (!url && remotePath === undefined && localPath === undefined) return tag;
                     const index = this.viewPhotoSpecs.length;
-                    this.viewPhotoSpecs.push({path:key ?? remotePath,url,remoteId:post.driveImages?.[remotePath],alt});
+                    this.viewPhotoSpecs.push({path:key ?? remotePath ?? localPath,url,remoteId:post.driveImages?.[remotePath],alt});
                     return '<div class="journal-photo view-photo-slot overflow-hidden" data-view-photo="'+index+'" role="group" aria-label="照片">照片待載入</div>';
                 });
 
@@ -2362,11 +2363,11 @@
     <script src="./folder-sync.js"></script>
     <script src="./conflict-ui.js"></script>
     <script src="./performance.js"></script>
-    <script src="./diagnostics.js"></script>
-    <script src="./lazy-photos.js"></script>
+    <script src="./diagnostics.js?v=12"></script>
+    <script src="./lazy-photos.js?v=12"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
-<script src="./weather.js"></script>
+<script src="./local-folder-loading.js?v=13"></script><script src="./weather.js?v=11"></script>
 </body>
 </html>
