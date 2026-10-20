@@ -17,7 +17,7 @@
  const pathParts=path=>{const parts=path.replace(/^\.\//,'').split('/');if(parts.length>16||parts.some(s=>!s||s==='.'||s==='..'||/[\\\0]/.test(s)))throw Error('不支援的照片路徑');return parts;};
  // Retain a bounded working set; visible covers and the open diary stay usable.
  p.trimLocalPhotoCache=function(keep=''){
-  const cache=this.localPhotoCache ||= new Map(),visible=new Set([...document.querySelectorAll('#postsContainer img')].map(node=>node.src));
+  const cache=this.localPhotoCache ||= new Map(),visible=new Set([...document.querySelectorAll('#postsContainer:not([hidden]) img, #bookHome:not([hidden]) img')].map(node=>node.src));
   if(keep)visible.add(keep);
   const viewing=!document.getElementById('viewModal').classList.contains('hidden');
   let bytes=[...cache.values()].reduce((sum,item)=>sum+item.bytes,0);
@@ -32,7 +32,7 @@
  p.loadLocalPhoto=async function(post,path){
   if(post.imagesMap?.[path]){const url=post.imagesMap[path],cache=this.localPhotoCache,item=cache?.get(url);if(item){cache.delete(url);cache.set(url,item);}return url;}
   post.localPhotoPending ||= new Map();if(post.localPhotoPending.has(path))return post.localPhotoPending.get(path);
-  const root=post.subDirHandle;if(!root)return '';
+  const root=post.subDirHandle||post.localPhotoRoot;if(!root)return '';
   const pending=(async()=>{const parts=pathParts(path);let dir=root;for(const name of parts.slice(0,-1))dir=await bounded(()=>dir.getDirectoryHandle(name),'讀取照片路徑');const handle=await bounded(()=>dir.getFileHandle(parts.at(-1)),'取得照片');diag.photoReads++;const file=await bounded(()=>handle.getFile(),'開啟照片');if(file.size>40*1024*1024)throw Error('此照片超過 40 MB，請另行縮小後再試');if(!this.localPosts?.includes(post)&&!this.posts?.includes(post))return '';const url=URL.createObjectURL(file);post.imagesMap[path]=url;this.localPhotoCache ||= new Map();this.localPhotoCache.set(url,{post,path,bytes:file.size});this.trimLocalPhotoCache(url);return url;})();
   post.localPhotoPending.set(path,pending);try{return await pending;}finally{post.localPhotoPending.delete(path);}
  };
@@ -49,7 +49,7 @@
    try{const handle=await bounded(()=>dir.getFileHandle('note.md'),'取得 note.md',signal);file=await bounded(()=>handle.getFile(),'開啟 note.md',signal);}catch(e){if(e.name==='NotFoundError')return;throw e;}
    if(file.size>8*1024*1024)throw Error('note.md 超過 8 MB，已略過，原檔案保留');
    const text=await bounded(()=>file.text(),'讀取日記文字',signal);const post=this.parseMarkdownPost(dir.name,text);
-   Object.assign(post,{folderName:dir.name,yearFolder:year,subDirHandle:dir,imagesMap:{},localImagePaths:Object.fromEntries(this.imagePaths(post.content).map(path=>[path,true]))});
+   Object.assign(post,{folderName:dir.name,yearFolder:year,subDirHandle:dir.readOnlyImport?null:dir,localPhotoRoot:dir.readOnlyImport?dir:null,imagesMap:{},localImagePaths:Object.fromEntries(this.imagePaths(post.content).map(path=>[path,true]))});
    post.driveCoverPath=this.imagePaths(post.content)[0]||null;loaded.push(post);diag.notes++;
   };
   const attempt=async(dir,year)=>{try{await add(dir,year);}catch(e){if(e.name==='AbortError')throw e;failures.push({folder:dir.name,message:e.message});if(diag.errors.length<20)diag.errors.push(failures.at(-1));}if(++seen%8===0)await yieldUI();};
@@ -70,7 +70,13 @@
   try{await this.loadPostsFromFolder();this.scheduleFolderAutoSync();document.getElementById('resumeDirectoryBtn').style.display='none';}
   catch(e){Object.assign(this,previous);this.checkPlatform();throw e;}
  };
- const pick=p.pickDirectory;p.pickDirectory=async function(...args){if(this.directoryPicking||this.directoryLoading)return;this.directoryPicking=true;const button=document.getElementById('dirBtn');button.disabled=true;try{return await pick.apply(this,args);}finally{this.directoryPicking=false;button.disabled=false;}};
+ const pick=p.pickDirectory;p.pickDirectory=async function(...args){
+  if(this.directoryPicking||this.directoryLoading||this.directoryImporting)return;
+  this.directoryPicking=true;const button=document.getElementById('dirBtn');button.disabled=true;
+  diag.selection={startedAt:new Date().toISOString(),phase:'requesting',api:typeof window.showDirectoryPicker==='function'?'native':'readonly-files'};
+  try{const run=()=>pick.apply(this,args);if(navigator.locks)return await navigator.locks.request('shiguang-local-directory-selection',{ifAvailable:true},lock=>{if(!lock){diag.selection.phase='busy-other-page';this.showToast('另一個分頁正在選擇或讀取資料夾，請完成後再試','error');return;}return run();});return await run();}
+  finally{if(diag.selection.phase==='requesting')diag.selection.phase='returned';diag.selection.finishedAt=new Date().toISOString();this.directoryPicking=false;button.disabled=false;}
+ };
  const sync=p.syncFoldersData;p.syncFoldersData=async function(...args){if(this.directoryLoading){if(!args[0])this.showToast('資料夾讀取中，請完成後再同步','error');return;}return sync.apply(this,args);};
  // Covers are loaded only for the displayed page, at most two at a time.
  const cover=p.queuePageCovers;p.queuePageCovers=function(posts){cover.call(this,posts.filter(post=>!post.localImagePaths));this.localCoverQueue ||= [];this.localCoverWorkers ||= 0;for(const post of posts){if(!post.localImagePaths||!post.driveCoverPath||post.coverImage||post.localCoverPending||post.coverFailed)continue;post.localCoverPending=true;this.localCoverQueue.push(post);}const drain=()=>{while(this.localCoverWorkers<2&&this.localCoverQueue.length){const post=this.localCoverQueue.shift();if(!this.posts.includes(post)){post.localCoverPending=false;continue;}this.localCoverWorkers++;this.loadLocalPhoto(post,post.driveCoverPath).then(url=>{if(url&&this.posts.includes(post)){post.coverImage=url;this.requestPostsRender();}}).catch(e=>{post.coverFailed=true;if(diag.errors.length<20)diag.errors.push({photo:post.driveCoverPath,message:e.message});}).finally(()=>{post.localCoverPending=false;this.localCoverWorkers--;drain();});}};drain();};

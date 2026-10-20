@@ -246,7 +246,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 15</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 16</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -430,7 +430,7 @@
                         <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
                     </div>
                 </div>
-                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 15｜更新日期：2026-10-20</p>
+                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 16｜更新日期：2026-10-20</p>
             </div>
         </div>
     </div>
@@ -743,11 +743,14 @@
                 }
 
                 try {
+                    if(window.LocalFolderDiagnostics?.selection)LocalFolderDiagnostics.selection.phase='awaiting-native-picker';
                     const handle = await window.showDirectoryPicker({mode: 'readwrite'});
+                    if(window.LocalFolderDiagnostics?.selection)LocalFolderDiagnostics.selection.phase='loading-selected-folder';
                     await this.activateDirectory(handle);
                     this.savedDirectory = handle;
                     try { await this.directoryStore(handle, true); }
                     catch (error) { this.showToast('已連結，但瀏覽器無法記住資料夾；重新整理後需再選取', 'error'); return; }
+                    if(window.LocalFolderDiagnostics?.selection)LocalFolderDiagnostics.selection.phase='complete';
                     this.showToast(`成功連結並記住資料夾：${handle.name}`);
                 } catch (err) {
                     if (err.name !== 'AbortError') {
@@ -2380,6 +2383,6 @@
     <script>
         const app = new BlogJournalApp();
     </script>
-<script src="./local-folder-loading.js?v=15"></script><script src="./weather.js?v=11"></script>
+<script src="./local-folder-loading.js?v=16"></script><script src="./local-folder-import.js?fix=dual-20261020"></script><script src="./weather.js?v=11"></script>
 </body>
 </html>

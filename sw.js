@@ -1,5 +1,5 @@
-const CACHE = 'shiguang-shell-v67-ver15';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './favicon.ico?v=11', './icon-16.png?v=11', './icon-32.png?v=11', './icon-180.png?v=11', './icon-192.png', './icon-512.png', './folder-sync.js', './conflict-ui.js', './performance.js', './diagnostics.js?v=12', './lazy-photos.js?v=12', './local-folder-loading.js?v=15', './weather.js?v=11', './moon-phase.js?v=11', './weather.css', './photo-compression.js', './完整設定說明.html', './assets/tailwind.js', './assets/fontawesome.css', './webfonts/fa-solid-900.woff2', './webfonts/fa-regular-400.woff2', './webfonts/fa-brands-400.woff2'];
+const CACHE = 'shiguang-shell-v68-ver16';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './favicon.ico?v=11', './icon-16.png?v=11', './icon-32.png?v=11', './icon-180.png?v=11', './icon-192.png', './icon-512.png', './folder-sync.js', './conflict-ui.js', './performance.js', './diagnostics.js?v=12', './lazy-photos.js?v=12', './local-folder-loading.js?v=16', './local-folder-import.js?fix=dual-20261020', './weather.js?v=11', './moon-phase.js?v=11', './weather.css', './photo-compression.js', './完整設定說明.html', './assets/tailwind.js', './assets/fontawesome.css', './webfonts/fa-solid-900.woff2', './webfonts/fa-regular-400.woff2', './webfonts/fa-brands-400.woff2'];
 self.addEventListener('install', event => event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);await cache.addAll(SHELL.map(url=>new Request(url,{cache:'reload'})));await self.skipWaiting();
 })()));
