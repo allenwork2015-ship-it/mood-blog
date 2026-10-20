@@ -23,3 +23,7 @@
 /* 觸控範圍隨書頁縮放補償；控制點外觀及照片座標不變。 */
 @media(pointer:coarse){#bookHomeSpread .free-photo button:before{inset:auto;left:50%;top:50%;width:calc(44px / var(--book-scale,1));height:calc(44px / var(--book-scale,1));transform:translate(-50%,-50%)}.free-book-paper footer button,.free-book-paper footer label{min-height:44px}.book-home-nav button,.book-home-nav input,.book-home-quick select,.book-home-quick button,.free-book-retry{min-height:44px}}
 .free-book-status:not(:empty){padding:6px 0;line-height:1.6}
+
+/* Keep layout width independent from unscaled paper and mobile browser chrome. */
+#bookHomeSpread{width:100%;max-width:100%;box-sizing:border-box;contain:inline-size}.book-home-slot{overflow:hidden;overflow:clip;min-width:0}.book-home-mobile-leaf{position:absolute;z-index:160;pointer-events:none;overflow:hidden}.book-home-mobile-leaf .book-home-paper{border-radius:5px!important}#bookHomeSpread .free-photo,#bookHomeSpread .free-photo button{touch-action:pinch-zoom}
+@media(pointer:coarse){.book-home-nav input,.book-home-quick select{font-size:16px}}
