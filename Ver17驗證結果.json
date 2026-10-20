@@ -1,0 +1,215 @@
+{
+  "version": "Ver 17",
+  "date": "2026-10-20",
+  "scope": "isolated Chrome, synthetic notes, native browser storage/file fixtures and mock Drive; no user data",
+  "checks": {
+    "legacyPlainNotes": true,
+    "browseDoesNotWrite": true,
+    "ordinaryNotebookAlternation": true,
+    "localConflictAllChoices": true,
+    "draftRestoreVersionCheck": true,
+    "photoMultiSelectCompressionPartialFailure": true,
+    "pageControls": true,
+    "crossPageDragAndFlip": true,
+    "mobileTouchAndLayouts": true
+  },
+  "upgrade": {
+    "passed": true,
+    "upgrade": "Ver 16 -> Ver 17",
+    "pendingPreserved": true,
+    "settings": {
+      "darkMode": true,
+      "viewMode": "list"
+    },
+    "formalNamespace": true,
+    "shellAssets": [
+      "",
+      "index.html",
+      "manifest.webmanifest?v=17",
+      "%E5%AE%8C%E6%95%B4%E8%A8%AD%E5%AE%9A%E8%AA%AA%E6%98%8E.html",
+      "icon.svg",
+      "favicon.ico?v=11",
+      "icon-16.png?v=11",
+      "icon-32.png?v=11",
+      "icon-180.png?v=11",
+      "icon-192.png",
+      "icon-512.png",
+      "tailwind.js?v=17",
+      "fontawesome.css?v=17",
+      "weather.css?v=17",
+      "photo-compression.js?v=17",
+      "moon-phase.js?v=17",
+      "folder-sync.js?v=17",
+      "conflict-ui.js?v=17",
+      "performance.js?v=17",
+      "diagnostics.js?v=17",
+      "lazy-photos.js?v=17",
+      "local-folder-loading.js?v=17",
+      "local-folder-import.js?v=17",
+      "journal-persistence.js?v=17",
+      "photo-batch.js?v=17",
+      "journal-book.js?v=17",
+      "book-pagination.js?v=17",
+      "book-home.js?v=17",
+      "free-book-editor.js?v=17",
+      "journal-conflicts.js?v=17",
+      "journal-editor-bridge.js?v=17",
+      "weather.js?v=17",
+      "book-home.css?v=17",
+      "journal-book.css?v=17",
+      "fa-brands-400.woff2",
+      "fa-regular-400.woff2",
+      "fa-solid-900.woff2",
+      "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.123.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.122.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.73.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.117.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.121.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.115.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.118.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.104.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.119.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.10.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.116.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.111.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.110.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.120.woff2",
+      "XLYgIZb5bJNDGYxLBibeHZ0BhnJsUnN3PrBufRbmGqUtcg4pzRPk5AEpzv6YzI9aTbOhf6M.114.woff2"
+    ],
+    "offlineReload": true,
+    "pageErrors": [],
+    "realGoogleDrive": false
+  },
+  "stress": {
+    "date": "2026-10-20",
+    "version": "notebook test 2026-10-20",
+    "scope": "isolated Chrome; synthetic file handles and photos; no user data or Google Drive",
+    "results": [
+      {
+        "test": "notebook entry",
+        "notes": 100,
+        "pages": 800,
+        "ms": 880,
+        "models": 100,
+        "dirty": false,
+        "photoReads": 12
+      },
+      {
+        "test": "notebook entry",
+        "notes": 500,
+        "pages": 4000,
+        "ms": 969,
+        "models": 500,
+        "dirty": false,
+        "photoReads": 12
+      },
+      {
+        "test": "notebook entry",
+        "notes": 1000,
+        "pages": 8000,
+        "ms": 1065,
+        "models": 1000,
+        "dirty": false,
+        "photoReads": 12
+      },
+      {
+        "test": "200 notebook page jumps and idle",
+        "renders": 200,
+        "idleRenders": 0,
+        "idleReads": 0,
+        "cache": {
+          "count": 30,
+          "bytes": 32553360,
+          "limitBytes": 33554432,
+          "limitCount": 48
+        },
+        "dirty": false
+      },
+      {
+        "test": "mode switching",
+        "switches": 50,
+        "heapMB": 34.6,
+        "listeners": 170,
+        "nodes": 7729,
+        "models": 1000,
+        "dirty": 0,
+        "writing": 0,
+        "importing": 0
+      },
+      {
+        "test": "mode switching",
+        "switches": 100,
+        "heapMB": 34.6,
+        "listeners": 170,
+        "nodes": 7729,
+        "models": 1000,
+        "dirty": 0,
+        "writing": 0,
+        "importing": 0
+      },
+      {
+        "test": "mode switching",
+        "switches": 150,
+        "heapMB": 34.6,
+        "listeners": 170,
+        "nodes": 7729,
+        "models": 1000,
+        "dirty": 0,
+        "writing": 0,
+        "importing": 0
+      }
+    ],
+    "completed": true,
+    "pageErrors": []
+  },
+  "parallelVersions": [
+    "PASS: same browser profile/origin serializes selection; busy second page never opens a picker; each page loads after first completes.",
+    "PASS: separate browser storage contexts load concurrently without application loop; locks do not claim cross-app protection.",
+    {
+      "test": "simultaneous readonly imports",
+      "results": [
+        {
+          "notes": 500,
+          "indexed": 10500,
+          "photoReads": 12,
+          "ms": 1131,
+          "beats": 216,
+          "readOnly": true,
+          "rootNull": true
+        },
+        {
+          "notes": 500,
+          "indexed": 10500,
+          "photoReads": 12,
+          "ms": 860,
+          "beats": 167,
+          "readOnly": true,
+          "rootNull": true
+        }
+      ]
+    }
+  ],
+  "mockCloud": {
+    "status": "passed",
+    "clients": 2,
+    "separateStorage": true,
+    "offlineQueueRetained": true,
+    "staleEditConflicted": true,
+    "remoteChoicePreservedBackup": true,
+    "successfulNoteWrites": 2,
+    "photoWrites": 2,
+    "uniquePhotoIds": 2,
+    "noteIds": [
+      "same-note",
+      "same-note"
+    ],
+    "realGoogleDrive": false,
+    "realIPhone": false
+  },
+  "limitations": [
+    "Not a real iPhone or Google Drive test",
+    "Not a multi-hour endurance guarantee",
+    "Full offline reading of all remote content is not included"
+  ]
+}

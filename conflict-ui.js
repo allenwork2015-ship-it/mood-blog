@@ -50,13 +50,13 @@
  p.selectFolderConflict=function(index){const c=this.folderConflictSelection?.[index];if(!c)return;this.activeConflict={kind:'folder',...c};this.showConflictComparison(c.local,c.remote);};
  p.resolveConflictChoice=async function(choice){
   if(this.conflictResolving||this.driveBusy||!this.activeConflict)return;
-  if(!confirm(choice==='local'?'採用本機版更新雲端？兩個版本會先備份。':choice==='remote'?'採用雲端版取代本機修改？本機修改會先備份。':'保留雲端並另存本機修改副本？'))return;
+  if(!confirm(this.activeConflict.kind==='journal'?'採用所選版本？兩個版本及照片會先備份。':choice==='local'?'採用本機版更新雲端？兩個版本會先備份。':choice==='remote'?'採用雲端版取代本機修改？本機修改會先備份。':'保留雲端並另存本機修改副本？'))return;
   const perform=async()=>{
    this.conflictResolving=true;this.driveBusy=true;
    document.querySelectorAll('#conflictChoices button').forEach(b=>b.disabled=true);
    try{
     const active=this.activeConflict;
-    if(active.kind==='folder'){await active.resolve(choice);}
+    if(active.kind==='folder'||active.kind==='journal'){await active.resolve(choice);}
     else{
      const entry=(await this.offlineStore('all')).find(e=>e.id===active.entry.id);
      if(!entry?.conflict||JSON.stringify([entry.content,entry.title,entry.mood,entry.date])!==JSON.stringify([active.entry.content,active.entry.title,active.entry.mood,active.entry.date]))throw Error('本機修改已變更，請重新開啟比較');

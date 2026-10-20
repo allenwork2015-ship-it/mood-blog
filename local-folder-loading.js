@@ -49,7 +49,7 @@
    try{const handle=await bounded(()=>dir.getFileHandle('note.md'),'取得 note.md',signal);file=await bounded(()=>handle.getFile(),'開啟 note.md',signal);}catch(e){if(e.name==='NotFoundError')return;throw e;}
    if(file.size>8*1024*1024)throw Error('note.md 超過 8 MB，已略過，原檔案保留');
    const text=await bounded(()=>file.text(),'讀取日記文字',signal);const post=this.parseMarkdownPost(dir.name,text);
-   Object.assign(post,{folderName:dir.name,yearFolder:year,subDirHandle:dir.readOnlyImport?null:dir,localPhotoRoot:dir.readOnlyImport?dir:null,imagesMap:{},localImagePaths:Object.fromEntries(this.imagePaths(post.content).map(path=>[path,true]))});
+   Object.assign(post,{folderName:dir.name,yearFolder:year,localSourceId:root.localSourceId||window.JournalPersistence?.rootKey(root),subDirHandle:dir.readOnlyImport?null:dir,localPhotoRoot:dir.readOnlyImport?dir:null,imagesMap:{},localImagePaths:Object.fromEntries(this.imagePaths(post.content).map(path=>[path,true]))});
    post.driveCoverPath=this.imagePaths(post.content)[0]||null;loaded.push(post);diag.notes++;
   };
   const attempt=async(dir,year)=>{try{await add(dir,year);}catch(e){if(e.name==='AbortError')throw e;failures.push({folder:dir.name,message:e.message});if(diag.errors.length<20)diag.errors.push(failures.at(-1));}if(++seen%8===0)await yieldUI();};

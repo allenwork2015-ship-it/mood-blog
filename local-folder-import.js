@@ -17,6 +17,7 @@
   const files=Array.from(input.files||[]);if(!files.length)return;
   this.directoryImporting=true;
   const diag=window.LocalFolderDiagnostics,root=directory(files[0].webkitRelativePath.split('/')[0]);
+  root.localSourceId=crypto.randomUUID();
   const previous={rootDirHandle:this.rootDirHandle,sourceMode:this.sourceMode,readOnly:this.readOnly,posts:this.posts,localPosts:this.localPosts,localDirectoryName:this.localDirectoryName};
   diag.import={phase:'indexing',files:files.length,indexed:0};
   try{
