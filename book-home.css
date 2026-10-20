@@ -27,3 +27,10 @@
 /* Keep layout width independent from unscaled paper and mobile browser chrome. */
 #bookHomeSpread{width:100%;max-width:100%;box-sizing:border-box;contain:inline-size}.book-home-slot{overflow:hidden;overflow:clip;min-width:0}.book-home-mobile-leaf{position:absolute;z-index:160;pointer-events:none;overflow:hidden}.book-home-mobile-leaf .book-home-paper{border-radius:5px!important}#bookHomeSpread .free-photo,#bookHomeSpread .free-photo button{touch-action:pinch-zoom}
 @media(pointer:coarse){.book-home-nav input,.book-home-quick select{font-size:16px}}
+
+/* Reading at 1x: vertical scroll and pinch remain native; horizontal swipes belong to the book. */
+#bookHomeSpread:not(.book-home-zoomed){touch-action:pan-y pinch-zoom;overscroll-behavior-x:contain}
+#bookHomeSpread:not(.book-home-zoomed) .free-photo:not(.free-selected){touch-action:pan-y pinch-zoom}
+#bookHomeSpread.book-home-zoomed,#bookHomeSpread.book-home-zoomed *{touch-action:auto!important}
+
+.book-touch-help{display:none}@media(pointer:coarse){.book-touch-help{display:block;margin:0 0 6px;font-size:12px;line-height:1.5;opacity:.75}}

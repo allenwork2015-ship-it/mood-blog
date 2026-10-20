@@ -1,0 +1,108 @@
+{
+  "version": "Ver 19",
+  "date": "2026-10-20",
+  "formalIntegrated": true,
+  "deployedToGitHub": false,
+  "storageNamespaceUnchanged": true,
+  "userReviewAccepted": true,
+  "automatedRealIPhone": false,
+  "automatedRealGoogleDrive": false,
+  "desktopMouseRegression": true,
+  "cloud": {
+    "passed": true,
+    "actualTouchEdits": 20,
+    "editingDriveRequests": 0,
+    "burstUploads": 1,
+    "latestPhotoPosition": true,
+    "photoReuploads": 0,
+    "manualImmediate": true,
+    "editsDuringUploadRetained": true,
+    "automaticFollowupUpload": true,
+    "offlineQueueRetained": true,
+    "errorStillVisible": true,
+    "latestRevisionRetry": true,
+    "sameNoteId": true,
+    "pageErrors": [],
+    "realGoogleDrive": false,
+    "realIPhone": false
+  },
+  "reload": {
+    "passed": true,
+    "pendingSurvivesReload": true,
+    "resumeQuietTimer": true,
+    "editableAfterReload": true,
+    "noSelfConflict": true
+  },
+  "partial": {
+    "passed": true,
+    "partialPublicationRetry": true,
+    "newDraftRetained": true,
+    "noDuplicateNote": true,
+    "noPhotoReupload": true
+  },
+  "local": {
+    "passed": true,
+    "realOPFSLocalSave": true,
+    "backgroundFolderSyncHeld": true,
+    "idleFolderSyncOnce": true,
+    "manualFlushBeforeLock": true,
+    "realDriveFolderSync": false
+  },
+  "conflicts": {
+    "status": "passed",
+    "clients": 2,
+    "separateStorage": true,
+    "offlineQueueRetained": true,
+    "staleEditConflicted": true,
+    "remoteChoicePreservedBackup": true,
+    "successfulNoteWrites": 2,
+    "photoWrites": 2,
+    "uniquePhotoIds": 2,
+    "noteIds": [
+      "same-note",
+      "same-note"
+    ],
+    "realGoogleDrive": false,
+    "realIPhone": false
+  },
+  "shell": {
+    "passed": true,
+    "storageNamespaceUnchanged": true,
+    "scriptSyntax": true,
+    "shellAssetsComplete": true,
+    "realServiceWorkerInstall": true,
+    "offlineReloadWithBookSync": true,
+    "isolatedStoredEntryPreserved": true,
+    "pageErrors": [],
+    "realIPhone": false,
+    "realGoogleDrive": false
+  },
+  "touch": {
+    "passed": true,
+    "actualChromiumSingleSwipeBothDirections": true,
+    "unselectedPhotoReads": true,
+    "tapThenDragEdits": true,
+    "focusedTextDoesNotFlip": true,
+    "twoFingerDoesNotFlip": true,
+    "zoomedNativePan": {
+      "before": {
+        "x": 0,
+        "y": 0,
+        "scale": 1.5
+      },
+      "after": {
+        "x": 88,
+        "y": 0,
+        "scale": 1.5
+      }
+    },
+    "normalNativeVerticalScroll": {
+      "before": 629,
+      "after": 714
+    },
+    "animationFrames": 193,
+    "stableSizeAndPosition": true,
+    "pageErrors": [],
+    "realIPhone": false
+  }
+}
