@@ -15,11 +15,25 @@
  }
  const yieldUI=()=>new Promise(r=>setTimeout(r,0));
  const pathParts=path=>{const parts=path.replace(/^\.\//,'').split('/');if(parts.length>16||parts.some(s=>!s||s==='.'||s==='..'||/[\\\0]/.test(s)))throw Error('不支援的照片路徑');return parts;};
+ // Retain a bounded working set; visible covers and the open diary stay usable.
+ p.trimLocalPhotoCache=function(keep=''){
+  const cache=this.localPhotoCache ||= new Map(),visible=new Set([...document.querySelectorAll('#postsContainer img')].map(node=>node.src));
+  if(keep)visible.add(keep);
+  const viewing=!document.getElementById('viewModal').classList.contains('hidden');
+  let bytes=[...cache.values()].reduce((sum,item)=>sum+item.bytes,0);
+  for(const [url,item]of cache){if(cache.size<=48&&bytes<=32*1024*1024)break;if(visible.has(url)||(viewing&&item.post.id===this.viewPostId))continue;
+   cache.delete(url);bytes-=item.bytes;if(item.post.imagesMap[item.path]===url)delete item.post.imagesMap[item.path];if(item.post.coverImage===url)item.post.coverImage='';URL.revokeObjectURL(url);
+  }
+  diag.photoCache={count:cache.size,bytes,limitBytes:32*1024*1024,limitCount:48};
+ };
+ const release=p.releasePostImages;p.releasePostImages=function(posts=this.posts){release.call(this,posts);const removed=new Set(posts);for(const [url,item]of this.localPhotoCache||[])if(removed.has(item.post))this.localPhotoCache.delete(url);this.trimLocalPhotoCache();};
+ const render=p.renderPosts;p.renderPosts=function(...args){const result=render.apply(this,args);this.trimLocalPhotoCache();return result;};
+ const closeView=p.closeViewModal;p.closeViewModal=function(...args){const result=closeView.apply(this,args);this.trimLocalPhotoCache();return result;};
  p.loadLocalPhoto=async function(post,path){
-  if(post.imagesMap?.[path])return post.imagesMap[path];
+  if(post.imagesMap?.[path]){const url=post.imagesMap[path],cache=this.localPhotoCache,item=cache?.get(url);if(item){cache.delete(url);cache.set(url,item);}return url;}
   post.localPhotoPending ||= new Map();if(post.localPhotoPending.has(path))return post.localPhotoPending.get(path);
   const root=post.subDirHandle;if(!root)return '';
-  const pending=(async()=>{const parts=pathParts(path);let dir=root;for(const name of parts.slice(0,-1))dir=await bounded(()=>dir.getDirectoryHandle(name),'讀取照片路徑');const handle=await bounded(()=>dir.getFileHandle(parts.at(-1)),'取得照片');diag.photoReads++;const file=await bounded(()=>handle.getFile(),'開啟照片');if(file.size>40*1024*1024)throw Error('此照片超過 40 MB，請另行縮小後再試');if(!this.localPosts?.includes(post)&&!this.posts?.includes(post))return '';const url=URL.createObjectURL(file);post.imagesMap[path]=url;return url;})();
+  const pending=(async()=>{const parts=pathParts(path);let dir=root;for(const name of parts.slice(0,-1))dir=await bounded(()=>dir.getDirectoryHandle(name),'讀取照片路徑');const handle=await bounded(()=>dir.getFileHandle(parts.at(-1)),'取得照片');diag.photoReads++;const file=await bounded(()=>handle.getFile(),'開啟照片');if(file.size>40*1024*1024)throw Error('此照片超過 40 MB，請另行縮小後再試');if(!this.localPosts?.includes(post)&&!this.posts?.includes(post))return '';const url=URL.createObjectURL(file);post.imagesMap[path]=url;this.localPhotoCache ||= new Map();this.localPhotoCache.set(url,{post,path,bytes:file.size});this.trimLocalPhotoCache(url);return url;})();
   post.localPhotoPending.set(path,pending);try{return await pending;}finally{post.localPhotoPending.delete(path);}
  };
  p.loadPostsFromFolder=async function(){
@@ -42,6 +56,7 @@
   this.directoryLoadPromise=(async()=>{try{
    for await(const [name,entry]of enumerate(root)){if(signal.aborted)throw abortError();if(entry.kind!=='directory'||name.startsWith('.'))continue;if(/^\d{4}$/.test(name)){report(name);for await(const [,child]of enumerate(entry)){if(child.kind==='directory'&&!child.name.startsWith('.'))await attempt(child,name);}}else await attempt(entry,null);}
    if(signal.aborted||this.rootDirHandle!==root)throw abortError();
+   if(failures.length&&!loaded.length)throw Error('日記均未能讀取，保留原本已載入的資料；請查看效能紀錄');
    loaded.sort((a,b)=>b.date.localeCompare(a.date));const previous=this.localPosts||[];this.localPosts=loaded;if(this.sourceMode==='local')this.posts=loaded;this.releasePostImages(previous);this.renderPosts();this.updateStats();diag.status='complete';
    if(failures.length)this.showToast('已載入 '+loaded.length+' 篇；'+failures.length+' 個資料夾未讀取，請查看效能紀錄','error');
    return true;

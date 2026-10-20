@@ -1,0 +1,322 @@
+{
+  "baseline": {
+    "date": "2026-10-20",
+    "version": "Ver 14",
+    "scope": "isolated Chrome; synthetic file handles and photos; no user data or Google Drive",
+    "results": [
+      {
+        "test": "load",
+        "count": 100,
+        "ms": 57,
+        "maxHeartbeatGapMs": 32,
+        "beats": 33,
+        "loaded": 100,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 2
+      },
+      {
+        "test": "load",
+        "count": 500,
+        "ms": 274,
+        "maxHeartbeatGapMs": 26,
+        "beats": 57,
+        "loaded": 500,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 2
+      },
+      {
+        "test": "load",
+        "count": 1000,
+        "ms": 518,
+        "maxHeartbeatGapMs": 44,
+        "beats": 78,
+        "loaded": 1000,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 6
+      },
+      {
+        "test": "80 page turns",
+        "ms": 5064,
+        "photoReads": 948,
+        "livePhotoUrls": 960,
+        "maxPhotoConcurrency": 2,
+        "renders": 326,
+        "photoBytes": 1085112
+      },
+      {
+        "test": "200 search/filter changes and idle",
+        "renders": 201,
+        "idleRenders": 0,
+        "idleReads": 0
+      },
+      {
+        "test": "reader cycle",
+        "batch": 1,
+        "opened": 30,
+        "heapMB": 9,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 960,
+        "photoReads": 984
+      },
+      {
+        "test": "reader cycle",
+        "batch": 2,
+        "opened": 60,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 960,
+        "photoReads": 984
+      },
+      {
+        "test": "reader cycle",
+        "batch": 3,
+        "opened": 90,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 960,
+        "photoReads": 984
+      },
+      {
+        "test": "10 folder reloads",
+        "loaded": 100,
+        "livePhotoUrls": 12,
+        "renders": 30,
+        "recursive": 0
+      }
+    ],
+    "pageErrors": [],
+    "completed": true
+  },
+  "after": {
+    "date": "2026-10-20",
+    "version": "Ver 15 candidate",
+    "scope": "isolated Chrome; synthetic file handles and photos; no user data or Google Drive",
+    "results": [
+      {
+        "test": "load",
+        "count": 100,
+        "ms": 49,
+        "maxHeartbeatGapMs": 25,
+        "beats": 32,
+        "loaded": 100,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 4
+      },
+      {
+        "test": "load",
+        "count": 500,
+        "ms": 266,
+        "maxHeartbeatGapMs": 23,
+        "beats": 56,
+        "loaded": 500,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 3
+      },
+      {
+        "test": "load",
+        "count": 1000,
+        "ms": 543,
+        "maxHeartbeatGapMs": 20,
+        "beats": 84,
+        "loaded": 1000,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 4
+      },
+      {
+        "test": "80 page turns",
+        "ms": 5089,
+        "photoReads": 948,
+        "livePhotoUrls": 30,
+        "maxPhotoConcurrency": 2,
+        "renders": 327,
+        "photoBytes": 1085112
+      },
+      {
+        "test": "200 search/filter changes and idle",
+        "renders": 212,
+        "idleRenders": 0,
+        "idleReads": 0
+      },
+      {
+        "test": "reader cycle",
+        "batch": 1,
+        "opened": 30,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 30,
+        "photoReads": 1015
+      },
+      {
+        "test": "reader cycle",
+        "batch": 2,
+        "opened": 60,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 30,
+        "photoReads": 1023
+      },
+      {
+        "test": "reader cycle",
+        "batch": 3,
+        "opened": 90,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 30,
+        "photoReads": 1023
+      },
+      {
+        "test": "10 folder reloads",
+        "loaded": 100,
+        "livePhotoUrls": 12,
+        "renders": 34,
+        "recursive": 0
+      },
+      {
+        "test": "60 second continuous browsing",
+        "cycles": 716,
+        "heapMB": 7,
+        "cache": {
+          "count": 30,
+          "bytes": 32553360,
+          "limitBytes": 33554432,
+          "limitCount": 48
+        },
+        "photoReads": 9952,
+        "livePhotoUrls": 30
+      }
+    ],
+    "pageErrors": [],
+    "completed": true
+  },
+  "native": {
+    "test": "native browser filesystem",
+    "count": 200,
+    "ms": 151,
+    "maxHeartbeatGapMs": 10,
+    "beats": 14,
+    "photoReads": 0
+  },
+  "photos": {
+    "test": "20 real image compressions",
+    "ms": 4605,
+    "sourcePhotoBytes": 2588760,
+    "totalOutputBytes": 16228440,
+    "largestOutputBytes": 811422,
+    "count": 20,
+    "maxConcurrent": 1,
+    "finished": true,
+    "tags": 20
+  },
+  "limitations": [
+    "Synthetic counts and accelerated operations are not real user disk performance.",
+    "JS heap excludes image decode, Blob storage and total Chrome process memory.",
+    "One-minute soak is not an hours-long endurance test.",
+    "No real Google Drive authentication, upload or multi-device synchronization stress in this phase."
+  ],
+  "searchAndFilterRegression": {
+    "date": "2026-10-20",
+    "version": "Ver 15 candidate",
+    "scope": "isolated Chrome; synthetic file handles and photos; no user data or Google Drive",
+    "results": [
+      {
+        "test": "load",
+        "count": 100,
+        "ms": 52,
+        "maxHeartbeatGapMs": 27,
+        "beats": 34,
+        "loaded": 100,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 4
+      },
+      {
+        "test": "load",
+        "count": 500,
+        "ms": 265,
+        "maxHeartbeatGapMs": 26,
+        "beats": 56,
+        "loaded": 500,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 2
+      },
+      {
+        "test": "load",
+        "count": 1000,
+        "ms": 557,
+        "maxHeartbeatGapMs": 26,
+        "beats": 84,
+        "loaded": 1000,
+        "recursive": 0,
+        "photoReads": 12,
+        "renders": 3
+      },
+      {
+        "test": "80 page turns",
+        "ms": 5152,
+        "photoReads": 948,
+        "livePhotoUrls": 30,
+        "maxPhotoConcurrency": 2,
+        "renders": 331,
+        "photoBytes": 1085112
+      },
+      {
+        "test": "200 search/filter changes and idle",
+        "renders": 417,
+        "idleRenders": 0,
+        "idleReads": 0
+      },
+      {
+        "test": "reader cycle",
+        "batch": 1,
+        "opened": 30,
+        "heapMB": 9.1,
+        "domNodes": 1549,
+        "listeners": 89,
+        "livePhotoUrls": 30,
+        "photoReads": 1020
+      },
+      {
+        "test": "reader cycle",
+        "batch": 2,
+        "opened": 60,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 30,
+        "photoReads": 1029
+      },
+      {
+        "test": "reader cycle",
+        "batch": 3,
+        "opened": 90,
+        "heapMB": 9.1,
+        "domNodes": 1550,
+        "listeners": 91,
+        "livePhotoUrls": 30,
+        "photoReads": 1029
+      },
+      {
+        "test": "10 folder reloads",
+        "loaded": 100,
+        "livePhotoUrls": 12,
+        "renders": 29,
+        "recursive": 0
+      }
+    ],
+    "pageErrors": [],
+    "completed": true
+  }
+}
