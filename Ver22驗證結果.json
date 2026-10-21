@@ -1,0 +1,136 @@
+{
+  "version": "Ver 22",
+  "date": "2026-10-21",
+  "deployedToGitHub": false,
+  "formalStoragePreserved": true,
+  "realIPhoneAutomated": false,
+  "realDriveAutomated": false,
+  "shell": {
+    "passed": true,
+    "storageNamespaceUnchanged": true,
+    "scriptSyntax": true,
+    "shellAssetsComplete": true,
+    "realServiceWorkerInstall": true,
+    "offlineReloadWithBookSync": true,
+    "isolatedStoredEntryPreserved": true,
+    "pageErrors": [],
+    "realIPhone": false,
+    "realGoogleDrive": false
+  },
+  "upgrade": {
+    "passed": true,
+    "from": "Ver 21",
+    "to": "Ver 22",
+    "pendingTextAndPhotoRetained": true,
+    "creativeDraftRetained": true,
+    "driveSettingRetained": true,
+    "serviceWorkerUpdated": true,
+    "pageErrors": []
+  },
+  "quick": {
+    "passed": true,
+    "presetsCurrentYear": true,
+    "custom24Months120Seconds": true,
+    "monthCoverage": 24,
+    "rerollSamePhotosNoReads": true,
+    "stableFrames": true,
+    "previewExportSamePlan": true,
+    "actualExport15": {
+      "duration": 15.019167,
+      "size": 2205833,
+      "type": "video/mp4;codecs=avc1.420020,mp4a.40.2",
+      "noWrites": 0
+    },
+    "pageErrors": []
+  },
+  "max120": {
+    "passed": true,
+    "max120": true,
+    "cancelThenRestart": true,
+    "actualExport": {
+      "duration": 120.009933,
+      "size": 19923120,
+      "type": "video/mp4;codecs=avc1.420020",
+      "noWrites": 0
+    },
+    "previewExportSamePlan": true,
+    "pageErrors": [],
+    "realIPhone": false
+  },
+  "photos": {
+    "passed": true,
+    "simulatedCloudLatencyMs": 220,
+    "results": [
+      {
+        "baseline": true,
+        "initialReads": 1,
+        "elapsedMs": 263.29999999701977,
+        "readsAfter": 2,
+        "pageErrors": []
+      },
+      {
+        "baseline": false,
+        "initialReads": 2,
+        "elapsedMs": 2.7000000029802322,
+        "readsAfter": 3,
+        "pageErrors": []
+      }
+    ],
+    "firstPagePreloadsOnlyAdjacent": true,
+    "backNavigation": true,
+    "realIPhone": false,
+    "realDrive": false
+  },
+  "cache": {
+    "passed": true,
+    "pages": 36,
+    "cache": {
+      "mode": "book",
+      "pageRenders": 37,
+      "photoRequests": 36,
+      "photoCacheHits": 1,
+      "prefetched": 1,
+      "photoCacheEntries": 24,
+      "decodedPhotoEntries": 1,
+      "decodedPhotoBytes": 2668000
+    },
+    "cacheReleasedOnClose": true,
+    "noNewRequestsAfterClose": true,
+    "pageErrors": []
+  },
+  "book": {
+    "passed": true,
+    "closeSaves": true,
+    "failedSaveKeepsOpen": true,
+    "escapePriority": true,
+    "nestedDialogEscape": true,
+    "focusTrap": true,
+    "restoreFocus": true,
+    "restoreScroll": true,
+    "modeCycles": 5,
+    "screenSizes": [
+      390,
+      844,
+      1024,
+      1280
+    ],
+    "pageErrors": [],
+    "realIPhone": false
+  },
+  "clear": {
+    "passed": true,
+    "readonlyButtonVisibleDisabled": true,
+    "readonlyExplanation": true,
+    "widths": [
+      320,
+      390,
+      430,
+      844
+    ],
+    "noOverflow": true,
+    "desktopOriginalPlacement": true,
+    "editableClearRemovesOnlyEmptyPage": true,
+    "localSave": true,
+    "pageErrors": []
+  }
+}

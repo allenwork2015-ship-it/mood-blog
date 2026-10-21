@@ -1,0 +1,25 @@
+.memory-launch{padding:9px 18px;border:1px solid #bbaa92;border-radius:22px;margin:0 0 16px;color:#695b4c}.dark .memory-launch{color:#e7ddc5}
+#memoryModal[hidden]{display:none!important}#memoryModal{position:fixed;inset:0;z-index:80;background:#241d17a6;padding:16px;display:flex;align-items:center;justify-content:center;color:#574a3d}.memory-panel{width:min(950px,100%);max-height:calc(100dvh - 32px);background:#fcfbfa;border:1px solid #bbaa92;border-radius:18px;display:flex;flex-direction:column;overflow:hidden}.dark .memory-panel{background:#201d19;color:#e7ddc5}.memory-panel>header{padding:12px 18px;border-bottom:1px solid #bbaa9255;display:flex;justify-content:space-between;align-items:center;flex:none}.memory-panel h2{font-size:20px;font-weight:700}.memory-body{overflow:auto;padding:18px;overscroll-behavior:contain}.memory-body p{font-size:13px;line-height:1.7;margin:10px 0}.memory-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.memory-fields label{display:flex;flex-direction:column;gap:5px;font-size:13px}.memory-panel input,.memory-panel select{min-height:44px;min-width:0;max-width:100%;padding:8px;border:1px solid #bbaa92;border-radius:10px;background:transparent;color:inherit}.dark .memory-panel option{background:#201d19}.memory-panel button,.memory-panel a{min-height:44px;padding:9px 14px;border:1px solid #bbaa92;border-radius:20px;display:inline-flex;align-items:center;justify-content:center}.memory-panel button:disabled{opacity:.4}.memory-panel button[hidden],.memory-panel a[hidden],.memory-panel canvas[hidden],.memory-panel video[hidden],.memory-panel label[hidden]{display:none!important}.memory-panel button:focus-visible,.memory-panel input:focus-visible,.memory-panel select:focus-visible{outline:2px solid #b98b4b;outline-offset:2px}.memory-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.memory-selected-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border:1px solid #bbaa9255;border-radius:12px;padding:12px;margin:10px 0}.memory-selected-row>span,.memory-selected-row>input{grid-column:1/-1;overflow-wrap:anywhere}.memory-selected-row>span{font-size:12px}.memory-panel h3{font-weight:700;margin-top:18px}.memory-panel summary{cursor:pointer;padding:10px 0}#memoryCandidates{max-height:280px;overflow:auto}#memoryCandidates label{display:flex;align-items:center;gap:8px;font-size:13px;overflow-wrap:anywhere}#memoryCandidates input{flex:none}#memoryCanvas,#memoryVideo{width:min(100%,340px);height:auto;margin:12px auto;display:block;border-radius:10px;background:#ede2d1}#memoryProgress{width:100%;height:18px}#memorySeekLabel{display:flex;flex-direction:column;font-size:13px}#memorySeek{width:100%}#memoryStatus{overflow-wrap:anywhere}
+@media(max-width:650px){#memoryModal{padding:0}.memory-panel{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border:0}.memory-panel>header{padding-top:calc(10px + env(safe-area-inset-top))}.memory-body{padding:12px 12px calc(18px + env(safe-area-inset-bottom))}.memory-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.memory-panel input,.memory-panel select{font-size:16px}}
+
+@media(max-width:899px){
+ .memory-browse-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+ .memory-browse-tools .book-home-tabs{margin:0;flex:none;max-width:100%}
+ .memory-browse-tools .book-home-tabs button{padding:8px 10px;font-size:12px;min-height:44px;white-space:nowrap}
+ .memory-browse-tools .memory-launch{margin:0;padding:8px 12px;font-size:12px;min-height:44px;white-space:nowrap}
+ .memory-browse-tools>p{flex-basis:100%;margin:0 0 4px!important;padding:8px!important;font-size:12px!important}
+ .memory-offline-toolbar{margin-top:10px}
+ .memory-offline-toolbar>div:first-child{display:grid;grid-template-columns:auto auto 1fr 1fr;gap:4px 6px;align-items:center}
+ .memory-offline-toolbar #newOfflineDiaryBtn{grid-row:1;grid-column:1}
+ .memory-offline-toolbar #uploadDiaryBtn{grid-row:1;grid-column:2}
+ .memory-offline-toolbar #viewLocalSourceBtn{grid-row:1;grid-column:3}
+ .memory-offline-toolbar #viewDriveSourceBtn{grid-row:1;grid-column:4}
+ .memory-offline-toolbar #newOfflineDiaryBtn,.memory-offline-toolbar #uploadDiaryBtn{font-size:12px;padding:7px 8px;min-height:44px;white-space:nowrap}
+ .memory-offline-toolbar #viewLocalSourceBtn,.memory-offline-toolbar #viewDriveSourceBtn{font-size:11px;padding:7px 5px;min-height:44px;white-space:nowrap}
+ .memory-offline-toolbar #offlineStatus{grid-row:2;grid-column:1/-1;font-size:11px;line-height:1.5;overflow-wrap:anywhere;padding:2px 0}
+ .memory-offline-toolbar #folderSyncBtn{grid-row:3;grid-column:1/-1;justify-self:start;font-size:12px;min-height:44px;padding:7px 12px}
+ .memory-offline-toolbar #offlineEntries:empty{margin-top:0}
+}
+
+/* Keep the recall action beside the notebook modes on desktop as well. */
+@media(min-width:900px){.memory-browse-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px}.memory-browse-tools .book-home-tabs,.memory-browse-tools .memory-launch{margin:0}.memory-browse-tools>p{flex-basis:100%}}

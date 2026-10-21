@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW" class="h-full">
 <head>
+<link rel="manifest" href="manifest.webmanifest?v=22">
     <meta charset="UTF-8">
-    <link rel="manifest" href="manifest.webmanifest?v=21">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <link rel="icon" href="favicon.ico?v=11" sizes="any">
@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#695b4e">
     <title>拾光手札 - MOOD & BLOG JOURNAL</title>
     <!-- Tailwind CSS CDN -->
-    <script src="./assets/tailwind.js?v=21"></script>
+    <script src="./assets/tailwind.js?v=22"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -46,7 +46,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./assets/fontawesome.css?v=21">
+    <link rel="stylesheet" href="./assets/fontawesome.css?v=22">
     <style>
         body {
             font-family: 'Inter', 'Noto Serif TC', sans-serif;
@@ -137,10 +137,10 @@
         .dark .system-record-tab[aria-selected="true"] { background:#d6c9bc;color:#292524; }
     button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline:2px solid #9a8b7d; outline-offset:3px; }
     </style>
-<link rel="stylesheet" href="./weather.css?v=21">
-<script src="./photo-compression.js?v=21"></script>
-<script src="./moon-phase.js?v=21"></script>
-<link rel="stylesheet" href="./book-window.css?v=21"></head>
+<link rel="stylesheet" href="./weather.css?v=22">
+<script src="./photo-compression.js?v=22"></script>
+<script src="./moon-phase.js?v=22"></script>
+<link rel="stylesheet" href="./book-window.css?v=22"><link rel="stylesheet" href="./memories.css?v=22"></head>
 <body class="h-full flex flex-col justify-between selection:bg-warm-200 dark:selection:bg-stone-700 transition-colors duration-300">
 
     <input type="file" id="directoryInput" webkitdirectory multiple hidden onchange="app.loadPostsFromFiles(event)">
@@ -181,7 +181,7 @@
 
     <button id="resumeDirectoryBtn" hidden onclick="app.resumeDirectory()" class="mx-auto mt-3 max-w-full px-4 py-3 rounded-full bg-warm-700 text-white text-sm" style="display:none;overflow-wrap:anywhere"></button>
 
-    <section class="max-w-5xl w-full mx-auto px-4 mt-4" aria-label="離線日記">
+    <section class="max-w-5xl w-full mx-auto px-4 mt-4 memory-offline-toolbar" aria-label="離線日記">
         <div class="flex flex-wrap gap-2 items-center">
             <button id="newOfflineDiaryBtn" onclick="app.openOfflineEditor()" class="px-4 py-3 rounded-full bg-warm-700 text-white text-sm">新增離線日記</button>
             <button id="uploadDiaryBtn" disabled onclick="app.uploadDiaries()" class="px-4 py-3 rounded-full border text-sm">上傳日記</button>
@@ -247,7 +247,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 21</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 22</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -431,7 +431,7 @@
                         <button onclick="app.setViewMode('list')" id="viewListBtn" class="py-2.5 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5"><i class="fa-solid fa-list-ul"></i> 條列清單</button>
                     </div>
                 </div>
-                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 21｜更新日期：2026-10-20</p>
+                <p class="text-xs text-warm-500 dark:text-stone-400 text-center pt-2" data-release-version>Ver 22｜更新日期：2026-10-21</p>
             </div>
         </div>
     </div>
@@ -2366,14 +2366,14 @@
         }
 
     </script>
-    <script src="./folder-sync.js?v=21"></script>
-    <script src="./conflict-ui.js?v=21"></script>
-    <script src="./performance.js?v=21"></script>
-    <script src="./diagnostics.js?v=21"></script>
-    <script src="./lazy-photos.js?v=21"></script>
+    <script src="./folder-sync.js?v=22"></script>
+    <script src="./conflict-ui.js?v=22"></script>
+    <script src="./performance.js?v=22"></script>
+    <script src="./diagnostics.js?v=22"></script>
+    <script src="./lazy-photos.js?v=22"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
-<script src="./local-folder-loading.js?v=21"></script><script src="./local-folder-import.js?v=21"></script><script src="./journal-persistence.js?v=21"></script><script src="./photo-batch.js?v=21"></script><script src="./journal-book.js?v=21"></script><script src="./book-pagination.js?v=21"></script><script src="./book-home.js?v=21"></script><script src="./free-book-editor.js?v=21"></script><script src="./book-sync.js?v=21"></script><script src="./journal-conflicts.js?v=21"></script><script src="./journal-editor-bridge.js?v=21"></script><script src="./weather.js?v=21"></script>
-<script src="./book-window.js?v=21"></script></body>
+<script src="./local-folder-loading.js?v=22"></script><script src="./local-folder-import.js?v=22"></script><script src="./journal-persistence.js?v=22"></script><script src="./photo-batch.js?v=22"></script><script src="./journal-book.js?v=22"></script><script src="./book-pagination.js?v=22"></script><script src="./book-home.js?v=22"></script><script src="./free-book-editor.js?v=22"></script><script src="./book-sync.js?v=22"></script><script src="./journal-conflicts.js?v=22"></script><script src="./journal-editor-bridge.js?v=22"></script><script src="./weather.js?v=22"></script>
+<script src="./book-window.js?v=22"></script><script src="./memory-film.js?v=22"></script><script src="./memories.js?v=22"></script></body>
 </html>
