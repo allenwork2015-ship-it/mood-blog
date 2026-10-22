@@ -11,25 +11,62 @@
   let meta=null,error='';
   if(match.length)try{
    meta=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(match[0][1]),c=>c.charCodeAt(0))));
-   if(meta.version!==1||!Array.isArray(meta.pages)||!meta.pages.length||meta.pages.some(p=>!p||typeof p.id!=='string'||!Array.isArray(p.photos)))throw Error('編排格式尚不支援');
+   if(![1,2].includes(meta.version)||!Array.isArray(meta.pages)||!meta.pages.length||meta.pages.some(p=>!p||typeof p.id!=='string'||!Array.isArray(p.photos)))throw Error('編排格式尚不支援');
   }catch(e){error=e.message;meta=null;}
   const body=content.replace(marker,'').trim();
   return {meta,body,error};
  }
  function pagesOf(content) {
-  const d=decode(content), markers=[...d.body.matchAll(pageMarker)];
-  if(!markers.length)return [{id:d.meta?.pages[0]?.id||uid(),text:d.body,photos:d.meta?.pages[0]?.photos||[],autoFlow:!d.meta||d.meta.pages[0]?.flow===true}];
+  const d=decode(content);if(d.meta?.version===2&&d.meta.body===d.body)return structuredClone(d.meta.pages).map(p=>({...p,autoFlow:p.flow===true}));if(d.meta?.version===2&&d.meta.body!==d.body)return [{id:uid(),text:d.body,photos:[],autoFlow:true,orderedFlow:true}];const markers=[...d.body.matchAll(pageMarker)];
+  if(!markers.length)return [{id:d.meta?.pages[0]?.id||uid(),text:d.body,photos:d.meta?.pages[0]?.photos||[],autoFlow:!d.meta||d.meta.pages[0]?.flow===true,orderedFlow:!d.meta}];
   const pages=markers.map((m,i)=>({id:m[1],text:d.body.slice(m.index+m[0].length,markers[i+1]?.index??d.body.length).trim(),photos:d.meta?.pages.find(p=>p.id===m[1])?.photos||[],autoFlow:!d.meta||d.meta.pages.find(p=>p.id===m[1])?.flow===true}));
   const leading=d.body.slice(0,markers[0].index).trim();if(leading)pages[0].text=leading+'\n\n'+pages[0].text;
   return pages;
  }
  const encode=meta=>{const bytes=new TextEncoder().encode(JSON.stringify(meta));let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s);};
- function pack(pages,retained=[]) {
-  const body=pages.map(p=>'<!-- shiguang-page: '+p.id+' -->\n'+p.text.trim()).join('\n\n');
-  return body+'\n\n<!-- shiguang-book: '+encode({version:1,retained,pages:pages.map(p=>({id:p.id,photos:p.photos,flow:p.autoFlow===true}))})+' -->';
+ // Keep semantic Markdown independent from page geometry. Legacy content remains readable.
+ function plain(value){return value.replace(/!\[[^\]]*\]\(([^)]+)\)/g,'');}
+ function signature(value){return plain(value).replace(/\s/g,'');}
+ function editText(source,beforeText,afterText,context={}){
+  const body=decode(source).body.replace(pageMarker,'\n\n');if(beforeText===afterText)return body;
+  const units=value=>{const out=[];for(const m of value.matchAll(/!\[[^\]]*\]\(([^)]+)\)|\S/g))if(!m[0].startsWith('!['))out.push({c:m[0],at:m.index,end:m.index+m[0].length});return out;};
+  const all=units(body),before=units(beforeText),after=units(afterText),find=before.map(u=>u.c).join(''),haystack=all.map(u=>u.c).join('');
+  const at=context.pages?.findIndex(p=>p.id===context.pageId)??-1;
+  const hint=at<0?-1:context.pages.slice(0,at).reduce((sum,p)=>sum+units(p.text).length,0);
+  let offset=hint>=0&&haystack.slice(hint,hint+find.length)===find?hint:haystack.indexOf(find);
+  if(offset<0||(hint!==offset&&find&&haystack.indexOf(find,offset+1)!==-1))throw Error('這段文字無法唯一對應正文，請使用一般編輯修改；編排仍保留。');
+  if(find===after.map(u=>u.c).join('')){
+   // Apply each whitespace gap independently; layout padding stays in metadata.
+   let result=body;
+   for(let n=before.length;n>=0;n--){
+    const oldGap=beforeText.slice(before[n-1]?.end??0,before[n]?.at??beforeText.length),newGap=afterText.slice(after[n-1]?.end??0,after[n]?.at??afterText.length);if(oldGap===newGap)continue;
+    let prefix=0,suffix=0;while(prefix<oldGap.length&&prefix<newGap.length&&oldGap[prefix]===newGap[prefix])prefix++;
+    while(suffix<oldGap.length-prefix&&suffix<newGap.length-prefix&&oldGap.at(-1-suffix)===newGap.at(-1-suffix))suffix++;
+    const lo=all[offset+n-1]?.end??0,hi=all[offset+n]?.at??body.length,gap=body.slice(lo,hi),positions=[];
+    for(const m of gap.matchAll(/!\[[^\]]*\]\(([^)]+)\)|\s/g))if(!m[0].startsWith('!['))positions.push(m.index);
+    const index=Math.min(positions.length,prefix),removed=oldGap.length-prefix-suffix,insert=newGap.slice(prefix,newGap.length-suffix),location=positions[index]??gap.length,deleted=new Set(positions.slice(index,index+removed));
+    let replacement='';for(let i=0;i<=gap.length;i++){if(i===location)replacement+=insert;if(i<gap.length&&!deleted.has(i))replacement+=gap[i];}
+    result=result.slice(0,lo)+replacement+result.slice(hi);
+   }
+   return result;
+  }
+
+  let first=0,last=0;while(first<before.length&&first<after.length&&before[first].c===after[first].c)first++;
+  while(last<before.length-first&&last<after.length-first&&before[before.length-1-last].c===after[after.length-1-last].c)last++;
+  const start=all[offset+first]?.at??body.length,end=all[offset+before.length-last]?.at??body.length;
+  const from=after[first]?.at??afterText.length,to=after[after.length-last]?.at??afterText.length;
+  const anchors=body.slice(start,end).match(/!\[[^\]]*\]\(([^)]+)\)/g)||[];
+  return body.slice(0,start)+afterText.slice(from,to)+(anchors.length?'\n'+anchors.join('\n')+'\n':'')+body.slice(end);
+ }
+ function pack(pages,retained=[],source){
+  const body=source===undefined?pages.map(p=>p.text.trim()).join('\n\n'):decode(source).body.replace(pageMarker,'\n\n');
+  const known=new Set([...body.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(m=>m[1]));
+  const added=[];for(const p of pages)for(const m of p.text.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g))if(!known.has(m[1])){known.add(m[1]);added.push(m[0]);}
+  const canonical=(body+(added.length?'\n\n'+added.join('\n\n'):'')).trim();
+  return canonical+'\n\n<!-- shiguang-book: '+encode({version:2,body:canonical,retained,pages:pages.map(p=>({id:p.id,text:p.text,photos:p.photos,flow:p.autoFlow===true}))})+' -->';
  }
  const visible=s=>decode(s).body.replace(pageMarker,'\n\n');
- window.JournalBookFormat={decode,pagesOf,pack,visible};
+ window.JournalBookFormat={decode,pagesOf,pack,visible,editText};
  const p=BlogJournalApp.prototype;
  const imagePaths=p.imagePaths;p.imagePaths=function(content){return [...new Set([...imagePaths.call(this,content),...(decode(content).meta?.retained||[]).filter(path=>typeof path==='string')])];};
  const parse=p.parseMarkdownPost;
@@ -57,7 +94,7 @@
  function composed(){const body=decode(byId('postContent').value).body;return state?.transport?body+'\n\n<!-- shiguang-book: '+encode(state.transport)+' -->':byId('postContent').value;}
  const pendingDrafts=new Map();let draftRunning=false;
  function draft(){if(!state)return;const snapshot={content:composed(),fields:Object.fromEntries(fields.map(id=>[id,byId(id).value])),images:{...app.stagedImages},at:Date.now()};const k=state.key;pendingDrafts.set(k,snapshot);if(draftRunning)return;draftRunning=true;saveChain=(async()=>{try{while(pendingDrafts.size){const [key,value]=pendingDrafts.entries().next().value;pendingDrafts.delete(key);try{await store('put',key,value);stats.draftWrites++;if(state?.key===key&&!pendingDrafts.has(key))byId('bookStatus').textContent='草稿已保存；儲存日記後同步。';}catch(e){app.showToast('草稿未保存：'+e.message,'error');}}}finally{draftRunning=false;}})();}
- function flush(){if(state?.editing){const raw=pack(state.pages,state.retained),d=decode(raw);state.transport=d.meta;byId('postContent').value=d.body;draft();}}
+ function flush(){if(state?.editing){const raw=pack(state.pages,state.retained,composed()),d=decode(raw);state.transport=d.meta;byId('postContent').value=d.body;draft();}}
  function drainPhotos(){while(photoWorkers<2&&photoQueue.length){const job=photoQueue.shift();if(job.token!==generation){job.resolve('');continue;}photoWorkers++;stats.activePhotos=photoWorkers;Promise.resolve().then(job.work).then(job.resolve,job.reject).finally(()=>{photoWorkers--;stats.activePhotos=photoWorkers;drainPhotos();});}}
  async function photoURL(path,post,token){
   const cacheKey=(post?.id||'draft')+'|'+path;
@@ -87,7 +124,7 @@
   const scale=Math.min(1,Math.max(0.3,host.clientWidth/420));paper.style.transform='scale('+scale+')';wrap.style.height=(560*scale)+'px';
   const text=document.createElement(editing?'textarea':'div');text.className='book-text';
   const plain=page.text.replace(/!\[.*?\]\(((?:[^()]|\([^()]*\))*)\)/g,'');
-  if(editing){text.value=plain;text.setAttribute('aria-label','此頁文字');text.onchange=()=>{const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');flush();renderEditor();};let flowTimer;text.oninput=()=>{clearTimeout(flowTimer);flowTimer=setTimeout(()=>{if(!text.isConnected||!state?.editing)return;const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');const result=window.JournalPagination?.paginate(pages,{title:byId('postTitle').value,date:byId('postDate').value,mood:byId('postMood').value});flush();if(result?.added){renderEditor();const node=byId('bookCanvas').querySelector('textarea');node?.focus();}},180);};}
+  if(editing){let semanticText=plain;const applyText=()=>{byId('postContent').value=editText(composed(),semanticText,text.value,{pages:state.pages,pageId:page.id});semanticText=text.value;};text.value=plain;text.setAttribute('aria-label','此頁文字');text.onchange=()=>{try{applyText();}catch(error){app.showToast(error.message,'error');return;}const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');flush();renderEditor();};let flowTimer;text.oninput=()=>{clearTimeout(flowTimer);flowTimer=setTimeout(()=>{if(!text.isConnected||!state?.editing)return;try{applyText();}catch(error){app.showToast(error.message,'error');return;}const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');const result=window.JournalPagination?.paginate(pages,{title:byId('postTitle').value,date:byId('postDate').value,mood:byId('postMood').value});flush();if(result?.added){renderEditor();const node=byId('bookCanvas').querySelector('textarea');node?.focus();}},180);};}
   else text.textContent=plain;paper.append(text);
   for(const item of placements(page).slice().sort((a,b)=>(b.z||0)-(a.z||0))){
    const node=document.createElement('div');node.className='book-photo';node.dataset.photo=item.id;
@@ -141,12 +178,12 @@
  const editOffline=p.editOfflineEntry;p.editOfflineEntry=async function(...args){const result=await editOffline.apply(this,args);if(!byId('editorModal').classList.contains('hidden'))setup();return result;};
  const close=p.closeEditor;p.closeEditor=function(...args){state=null;generation++;release();return close.apply(this,args);};
  const save=p.savePost;p.savePost=async function(...args){if(this.imageProcessing)return this.showToast('照片處理中，請稍候再儲存','error');document.activeElement?.blur();flush();const current=state,k=state?.key;await saveChain;if(state!==current)return;byId('postContent').value=composed();await save.apply(this,args);if(byId('editorModal').classList.contains('hidden')&&k)await store('delete',k).catch(()=>{});else if(state===current&&!decode(byId('postContent').value).error)byId('postContent').value=decode(byId('postContent').value).body;};
- const view=p.openViewModal;p.openViewModal=function(id){view.call(this,id);const post=this.displayPosts().find(p=>p.id===id);if(!post)return;const content=byId('viewContent');content.querySelectorAll('.book-read').forEach(n=>n.remove());if(!decode(post.content).meta)return;const b=document.createElement('button');b.className='book-read';b.textContent='以日記本模式閱讀';b.onclick=()=>{const pages=pagesOf(post.content);window.JournalPagination?.paginate(pages,post);let index=0;const panel=document.createElement('div'),nav=document.createElement('div'),host=document.createElement('div');nav.className='book-tabs';const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');prev.textContent='上一頁';next.textContent='下一頁';const render=()=>{label.textContent=(index+1)+'／'+pages.length;prev.disabled=index===0;next.disabled=index===pages.length-1;draw(host,pages,index,post,false);};prev.onclick=()=>{index--;render();};next.onclick=()=>{index++;render();};nav.append(prev,label,next);panel.append(nav,host);content.replaceChildren(panel);render();};content.prepend(b);};
+ const view=p.openViewModal;p.openViewModal=function(id){view.call(this,id);const post=this.displayPosts().find(p=>p.id===id);if(!post)return;const content=byId('viewContent');content.querySelectorAll('.book-read').forEach(n=>n.remove());if(!decode(post.content).meta)return;const b=document.createElement('button');b.className='book-read';b.textContent='以日記本模式閱讀';b.onclick=()=>{app.closeViewModal();window.BookWindow.open();const leaf=window.BookHomeSurface.leaves.find(item=>item.post.id===post.id);if(leaf)window.BookHomeSurface.go(leaf.page.id);};content.prepend(b);};
  const closeView=p.closeViewModal;p.closeViewModal=function(...args){generation++;release();return closeView.apply(this,args);};
  const compare=p.showConflictComparison;p.showConflictComparison=function(local,remote){compare.call(this,local,remote);const panels=byId('conflictComparison').querySelectorAll('section');[local,remote].forEach((v,i)=>{const d=decode(v.content);if(!d.meta)return;const info=document.createElement('p');info.textContent='日記本編排：'+JSON.stringify(d.meta);info.className='text-xs break-words';panels[i]?.append(info);});};
  // Hide transport markers in rendered text only, never in saved or compared data.
  const escape=window.escapeHtml;window.escapeHtml=function(value){return escape(typeof value==='string'?value.replace(marker,'').replace(pageMarker,'\n\n'):value);};
- document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./journal-book.css?v=22">');
+ document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./journal-book.css?v=23">');
  byId('postContent').insertAdjacentHTML('beforebegin','<div class="book-tabs"><button type="button" id="bookToggle">日記本編排</button></div><p id="bookStatus" role="status" class="text-xs my-2"></p><div id="bookTools" hidden><div class="book-toolbar"><div id="bookTabs" class="book-tabs"></div><label class="book-upload-label">＋ 照片<input id="bookUpload" type="file" accept="image/*" multiple hidden></label><details class="book-more"><summary>更多</summary><div><button type="button" id="bookAdd">新增頁面</button><button type="button" id="bookDelete">刪除此頁</button><button type="button" id="bookRestore">恢復草稿</button></div></details></div><div id="bookCanvas"></div></div>');
  byId('bookToggle').onclick=()=>{if(!state)return;document.activeElement?.blur();if(state.editing){flush();state.editing=false;}else{state.pages=pagesOf(composed());state.editing=true;}byId('bookTools').hidden=!state.editing;byId('postContent').hidden=state.editing;byId('inlineImageInput').closest('label').style.display=state.editing?'none':'';byId('bookToggle').textContent=state.editing?'文字編輯':'日記本編排';renderEditor();};
  byId('bookAdd').onclick=()=>{state.pages.push({id:uid(),text:'',photos:[]});state.index=state.pages.length-1;flush();renderEditor();};

@@ -137,5 +137,5 @@
  touchHost.addEventListener('click',event=>{if(event.detail!==0&&event.pointerType!=='mouse'&&performance.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},{capture:true});
  touchHost.addEventListener('touchcancel',resetGesture,{passive:true});window.addEventListener('blur',resetGesture);window.addEventListener('pagehide',resetGesture);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)resetGesture();});
- document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./book-home.css?v=22">');
+ document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./book-home.css?v=23">');
 })();

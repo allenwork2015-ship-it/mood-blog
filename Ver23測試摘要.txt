@@ -1,0 +1,1 @@
+詳見 Ver23驗證結果.json。所有列明的隔離測試通過，未宣稱真實 iPhone、Google Drive 或一般磁碟實機驗證；未上傳 GitHub。
