@@ -24,7 +24,7 @@
   if(post.localImagePaths?.[path])return app.loadLocalPhoto(post,path);
   const key=photoKey(post,path);if(cache.has(key))return cache.get(key);
   const token=epoch;
-  const result=(async()=>{if(post.imagesMap?.[path])return post.imagesMap[path];if(post.localImagePaths?.[path])return app.loadLocalPhoto(post,path);if(post.driveImages?.[path]){metrics.photoRequests++;const blob=await app.driveRequest('files/'+post.driveImages[path]+'?alt=media&supportsAllDrives=true',{},'blob');if(token!==epoch)return '';const url=URL.createObjectURL(blob);ownedURLs.add(url);remoteURLs.set(key,url);remoteBytes.set(key,blob.size);trimPhotos(url);return url;}return '';})();
+  const result=(async()=>{if(post.imagesMap?.[path])return post.imagesMap[path];if(post.localImagePaths?.[path])return app.loadLocalPhoto(post,path);if(post.driveImages?.[path]){metrics.photoRequests++;const blob=await (app.readReadingPhoto?app.readReadingPhoto(post,path):app.driveRequest('files/'+post.driveImages[path]+'?alt=media&supportsAllDrives=true',{},'blob'));if(token!==epoch)return '';const url=URL.createObjectURL(blob);ownedURLs.add(url);remoteURLs.set(key,url);remoteBytes.set(key,blob.size);trimPhotos(url);return url;}return '';})();
   cache.set(key,result);result.then(url=>{if(!url&&cache.get(key)===result)cache.delete(key);},()=>{if(cache.get(key)===result)cache.delete(key);});return result;
  }
  function cachedPhoto(post,path){const key=photoKey(post,path),url=post.imagesMap?.[path]||remoteURLs.get(key);if(url){metrics.photoCacheHits++;return url;}return '';}
@@ -137,5 +137,5 @@
  touchHost.addEventListener('click',event=>{if(event.detail!==0&&event.pointerType!=='mouse'&&performance.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},{capture:true});
  touchHost.addEventListener('touchcancel',resetGesture,{passive:true});window.addEventListener('blur',resetGesture);window.addEventListener('pagehide',resetGesture);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)resetGesture();});
- document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./book-home.css?v=23">');
+ document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./book-home.css?v=24">');
 })();

@@ -105,7 +105,7 @@
   const file=app.stagedImages?.[path];if(file){const url=URL.createObjectURL(file);urls.push(url);return url;}
   if(post?.imagesMap?.[path])return post.imagesMap[path];
   if(post?.localImagePaths?.[path])return app.loadLocalPhoto(post,path);
-  if(post?.driveImages?.[path]){stats.photoRequests++;const blob=await app.driveRequest('files/'+post.driveImages[path]+'?alt=media&supportsAllDrives=true',{},'blob');if(session!==photoSession)return '';const url=URL.createObjectURL(blob);urls.push(url);return url;}
+  if(post?.driveImages?.[path]){stats.photoRequests++;const blob=await (app.readReadingPhoto?app.readReadingPhoto(post,path):app.driveRequest('files/'+post.driveImages[path]+'?alt=media&supportsAllDrives=true',{},'blob'));if(session!==photoSession)return '';const url=URL.createObjectURL(blob);urls.push(url);return url;}
   return '';
   }});photoQueue.push(job);});
   const record={promise:pending,job};photoCache.set(cacheKey,record);drainPhotos();
@@ -183,7 +183,7 @@
  const compare=p.showConflictComparison;p.showConflictComparison=function(local,remote){compare.call(this,local,remote);const panels=byId('conflictComparison').querySelectorAll('section');[local,remote].forEach((v,i)=>{const d=decode(v.content);if(!d.meta)return;const info=document.createElement('p');info.textContent='日記本編排：'+JSON.stringify(d.meta);info.className='text-xs break-words';panels[i]?.append(info);});};
  // Hide transport markers in rendered text only, never in saved or compared data.
  const escape=window.escapeHtml;window.escapeHtml=function(value){return escape(typeof value==='string'?value.replace(marker,'').replace(pageMarker,'\n\n'):value);};
- document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./journal-book.css?v=23">');
+ document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="./journal-book.css?v=24">');
  byId('postContent').insertAdjacentHTML('beforebegin','<div class="book-tabs"><button type="button" id="bookToggle">日記本編排</button></div><p id="bookStatus" role="status" class="text-xs my-2"></p><div id="bookTools" hidden><div class="book-toolbar"><div id="bookTabs" class="book-tabs"></div><label class="book-upload-label">＋ 照片<input id="bookUpload" type="file" accept="image/*" multiple hidden></label><details class="book-more"><summary>更多</summary><div><button type="button" id="bookAdd">新增頁面</button><button type="button" id="bookDelete">刪除此頁</button><button type="button" id="bookRestore">恢復草稿</button></div></details></div><div id="bookCanvas"></div></div>');
  byId('bookToggle').onclick=()=>{if(!state)return;document.activeElement?.blur();if(state.editing){flush();state.editing=false;}else{state.pages=pagesOf(composed());state.editing=true;}byId('bookTools').hidden=!state.editing;byId('postContent').hidden=state.editing;byId('inlineImageInput').closest('label').style.display=state.editing?'none':'';byId('bookToggle').textContent=state.editing?'文字編輯':'日記本編排';renderEditor();};
  byId('bookAdd').onclick=()=>{state.pages.push({id:uid(),text:'',photos:[]});state.index=state.pages.length-1;flush();renderEditor();};
