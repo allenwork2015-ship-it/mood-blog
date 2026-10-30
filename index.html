@@ -136,6 +136,22 @@
         .system-record-tab[aria-selected="true"] { background:#68594b;color:white; }
         .dark .system-record-tab[aria-selected="true"] { background:#d6c9bc;color:#292524; }
     button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline:2px solid #9a8b7d; outline-offset:3px; }
+    
+    /* Mobile reading/editing: keep the viewport stable; photos retain their own controls. */
+    @media (any-pointer: coarse) {
+        #editorModal input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+        #editorModal textarea, #editorModal select,
+        #bookWindow input:not([type="file"]), #bookWindow select { font-size:16px !important; }
+        #editorModal, #viewModal, #bookWindow { touch-action:pan-y; }
+        #bookWindow #bookHomeSpread,
+        #bookWindow #bookHomeSpread.book-home-zoomed,
+        #bookWindow #bookHomeSpread.book-home-zoomed * { touch-action:pan-y !important; }
+        #editorModal .book-paper-wrap { touch-action:pan-y; }
+        #bookWindow #bookHomeSpread .free-photo.free-selected,
+        #bookWindow #bookHomeSpread .free-photo button,
+        #editorModal .book-photo, #editorModal .book-photo-overlay button,
+        #editorModal .book-resize, #editorModal .book-rotate { touch-action:none !important; }
+    }
     </style>
 <link rel="stylesheet" href="./weather.css?v=24">
 <script src="./photo-compression.js?v=24"></script>
@@ -2371,7 +2387,7 @@
     <script src="./performance.js?v=24"></script>
     <script src="./diagnostics.js?v=24"></script>
     <script src="./lazy-photos.js?v=24"></script>
-    <script src="./drive-performance.js?v=24"></script>
+    <script src="./drive-performance.js?v=24-loading1"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
