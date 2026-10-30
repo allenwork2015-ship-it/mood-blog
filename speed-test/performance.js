@@ -3,7 +3,9 @@
  p.runBackgroundWork=function(key,work){
   this.backgroundJobs ||= new Map();
   if(this.backgroundJobs.has(key))return this.backgroundJobs.get(key);
-  const result=(this.backgroundTail||Promise.resolve()).catch(()=>{}).then(work);
+  const job=[...(this.performanceActive?.values()||[])].reverse().find(job=>job.name===key),queued=performance.now();
+  if(job){job.stage='等待背景工作';job.queueStarted=queued;}
+  const result=(this.backgroundTail||Promise.resolve()).catch(()=>{}).then(()=>{if(job){job.queueMilliseconds=Math.round(performance.now()-queued);job.executionStarted=performance.now();job.stage='實際執行';}return work();});
   this.backgroundTail=result.catch(()=>{});this.backgroundJobs.set(key,result);
   result.then(()=>this.backgroundJobs.delete(key),()=>this.backgroundJobs.delete(key));return result;
  };

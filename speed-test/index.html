@@ -263,7 +263,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 24・效能測試 speed2</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 24・效能測試 speed3</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -2121,6 +2121,9 @@
             }
 
             async refreshCloudListInBackground() {
+                const recent=this.lastUploadedListRefresh;
+                const delay=recent&&recent.root===this.driveRoot?.id&&recent.token===this.driveToken?15000-(Date.now()-recent.time):0;
+                if(delay>0){clearTimeout(this.cloudListTimer);this.cloudListTimer=setTimeout(()=>this.refreshCloudListInBackground(),delay+50);return {skipped:'剛完成同步，完整列表檢查延後',deferredMilliseconds:delay};}
                 if (this.cloudListBusy || this.driveBusy || this.offlineSyncing || this.folderSyncBusy || document.hidden || this.sourceMode !== 'drive' || !this.driveRoot || !this.driveToken || Date.now() >= this.driveExpires || !navigator.onLine) return;
                 if (['editorModal','viewModal'].some(id => !document.getElementById(id).classList.contains('hidden'))) { this.cloudRefreshDeferred = true; return; }
                 const root = this.driveRoot.id, token = this.driveToken;
@@ -2378,10 +2381,10 @@
     </script>
     <script src="./folder-sync.js?v=24"></script>
     <script src="./conflict-ui.js?v=24"></script>
-    <script src="./performance.js?v=24"></script>
-    <script src="./diagnostics.js?v=24"></script>
+    <script src="./performance.js?v=24-speed3"></script>
+    <script src="./diagnostics.js?v=24-speed3"></script>
     <script src="./lazy-photos.js?v=24"></script>
-    <script src="./drive-performance.js?v=24-speed2"></script>
+    <script src="./drive-performance.js?v=24-speed3"></script>
     <script>
         const app = new BlogJournalApp();
     </script>

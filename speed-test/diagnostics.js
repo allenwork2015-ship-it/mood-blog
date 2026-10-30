@@ -43,6 +43,10 @@
  for(const [name,label]of Object.entries(labels)){
   const original=p[name];
   p[name]=function(...args){
+   const shared=this.backgroundJobs?.get(name);
+   if(shared&&['syncOffline','syncFolders','refreshCloudListInBackground'].includes(name)){
+    this.addPerformanceRecord(label,performance.now(),this.performanceRequestCount||0,'已合併：等待同一背景工作',{stage:'共用既有工作',requests:0,merged:true,queueMilliseconds:0,executionMilliseconds:0});return shared;
+   }
    const start=performance.now(),before=this.performanceRequestCount||0,errors=this.performanceErrorCount||0;
    this.performanceActive ||= new Map();const key=Symbol();
    const job={name,operation:label,time:Date.now(),started:start,stage:name==='connectDrive'?'準備連線':'執行中',stages:[]};
@@ -58,7 +62,7 @@
      if(this.lastIdleSyncReason===reason)return;
      this.lastIdleSyncReason=reason;
     }else if(name==='syncOffline')this.lastIdleSyncReason=null;
-    this.addPerformanceRecord(label,start,before,result,{stage:job.stage,stages:job.stages,...(skipped&&busy?{busyOperation:busy.operation,busyMilliseconds:Math.round(performance.now()-busy.started)}:{})});
+    this.addPerformanceRecord(label,start,before,result,{stage:job.stage,stages:job.stages,queueMilliseconds:job.queueMilliseconds??0,executionMilliseconds:job.executionStarted?Math.round(performance.now()-job.executionStarted):Math.round(performance.now()-start),...(skipped&&busy?{busyOperation:busy.operation,busyMilliseconds:Math.round(performance.now()-busy.started)}:{})});
    };
    try{const result=original.apply(this,args);if(result&&typeof result.then==='function')return result.then(value=>{done(false,value);return value;},error=>{done(true);throw error;});done(false,result);return result;}
    catch(error){done(true);throw error;}
@@ -69,7 +73,7 @@
   const records=[...this.getActivePerformanceRecords(),...(this.performanceRecords||[])];
   document.getElementById('performanceRows').innerHTML=records.map(r=>{
    const device=r.device?[r.device,r.os,r.browser,r.version].join('／'):'舊紀錄，未記錄裝置';
-   const stage=r.stage?'・'+r.stage:'';
+   const stage=(r.stage?'・'+r.stage:'')+(r.queueMilliseconds!==undefined?'・等待 '+r.queueMilliseconds+' ms・執行 '+r.executionMilliseconds+' ms':'');
    const busy=(r.busyOperation?'・忙碌工作：'+r.busyOperation+'（'+Math.round(r.busyMilliseconds/1000)+' 秒）':'')+(r.attempt?'・第 '+r.attempt+' 次嘗試':'')+(r.entryId?'・識別碼 '+r.entryId.slice(0,8):'')+(r.retryAt?'・預計重試 '+new Date(r.retryAt).toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei'}):'')+(r.retryManual?'・需手動處理':'');
    return '<div class="border rounded-xl p-3 text-xs"><p>'+escapeHtml(new Date(r.time).toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei'})+'・'+device+'・'+r.operation)+'</p><p>'+escapeHtml(r.milliseconds+' ms・'+(r.requests??'—')+' 次雲端請求・'+r.result+stage+busy)+'</p></div>';
   }).join('')||'目前沒有量測紀錄。';
