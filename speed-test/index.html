@@ -263,7 +263,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 24・效能測試 speed3</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 24・效能測試 speed4</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -1743,7 +1743,7 @@
                 finally { this.offlineSaving = false; }
             }
 
-            async ensureOfflineFile(id, name, parent, mimeType) {
+            async ensureOfflineFile(id, name, parent, mimeType, content = null) {
                 if(typeof id!=='string'||!id.trim())throw new Error('缺少已保存的雲端識別碼，停止建立以避免重複資料');
                 const read = async () => {
                     const file = await this.driveRequest('files/' + id + '?fields=id,trashed,parents,mimeType&supportsAllDrives=true');
@@ -1754,7 +1754,7 @@
                     return await read();
                 } catch (error) {
                     if (error.status !== 404) throw error;
-                    try { return await this.driveRequest('files?fields=id&supportsAllDrives=true', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, name, parents:[parent], mimeType})}); }
+                    try { if(content instanceof Blob && content.size<=5*1024*1024){const file=await this.driveUpload(parent,name,content,null,id);return {...file,contentUploaded:true};} return await this.driveRequest('files?fields=id&supportsAllDrives=true', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, name, parents:[parent], mimeType})}); }
                     catch (createError) {
                         if (createError.status !== 409 && !createError.retryable) throw createError;
                         // A lost response does not prove creation failed. Read the same reserved ID;
@@ -1827,9 +1827,10 @@
                                 const mood = this.getMoodObj(entry.mood), category = this.getCategoryObj(entry.category);
                                 const markdown=JournalPersistence.serialize({...entry,journalId:entry.journalId || entry.id});
                                 this.setUploadStage('建立或確認日記文字檔');
-                                await this.ensureOfflineFile(entry.ids.note, 'note.md', entry.ids.folder, 'text/markdown');
+                                const noteBlob=new Blob([markdown],{type:'text/markdown'});
+                                const noteFile=await this.ensureOfflineFile(entry.ids.note,'note.md',entry.ids.folder,'text/markdown',noteBlob);
                                 this.setUploadStage('上傳日記文字');
-                                await this.driveUpload(entry.ids.folder, 'note.md', new Blob([markdown], {type:'text/markdown'}), entry.ids.note);
+                                if(!noteFile.contentUploaded)await this.driveUpload(entry.ids.folder,'note.md',noteBlob,entry.ids.note);
                                 entry.status = 'synced'; entry.error = ''; await this.finishSyncedEntry(entry); changed = true;
                             } catch (error) {
                                 entry.status='pending';
@@ -2227,13 +2228,14 @@
                 return {parent, name: parts[parts.length - 1]};
             }
 
-            async driveUpload(parent, name, blob, existingId = null) {
+            async driveUpload(parent, name, blob, existingId = null, reservedId = null) {
                 let bytes;
                 try{
                     bytes=new Uint8Array(await blob.arrayBuffer());
                     if(!bytes.length || bytes.length!==blob.size)throw new Error('檔案內容不完整');
                 }catch(error){throw new Error('讀取上傳內容失敗：'+name+'；請重新選取照片，待傳文字仍保留');}
-                const metadata=existingId?{name}:{name,parents:[parent]};
+                if(reservedId&&(existingId||typeof reservedId!=='string'||!reservedId.trim()))throw Error('預留檔案識別碼無效');
+                const metadata=existingId?{name}:{name,parents:[parent],...(reservedId?{id:reservedId}:{})};
                 const boundary='shiguang_'+crypto.randomUUID();
                 const encoder=new TextEncoder();
                 const head=encoder.encode('--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+boundary+'\r\nContent-Type: '+(blob.type || 'application/octet-stream')+'\r\n\r\n');
@@ -2381,10 +2383,10 @@
     </script>
     <script src="./folder-sync.js?v=24"></script>
     <script src="./conflict-ui.js?v=24"></script>
-    <script src="./performance.js?v=24-speed3"></script>
-    <script src="./diagnostics.js?v=24-speed3"></script>
+    <script src="./performance.js?v=24-speed4"></script>
+    <script src="./diagnostics.js?v=24-speed4"></script>
     <script src="./lazy-photos.js?v=24"></script>
-    <script src="./drive-performance.js?v=24-speed3"></script>
+    <script src="./drive-performance.js?v=24-speed4"></script>
     <script>
         const app = new BlogJournalApp();
     </script>

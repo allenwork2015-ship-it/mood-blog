@@ -30,6 +30,7 @@
  const raw=p.driveRequestRaw;
  p.driveRequestRaw=function(path,options={},format,upload){
   this.performanceRequestCount=(this.performanceRequestCount||0)+1;
+  if(this.executingBackgroundJob)this.executingBackgroundJob.backgroundRequests++;
   const method=options.method||'GET';
   const stage=upload?'上傳檔案內容':path.includes('alt=media')?'讀取日記或照片':path.startsWith('files/generateIds')?'建立上傳識別碼':method==='GET'?'讀取雲端檔案資訊':method==='POST'?'建立雲端檔案':'更新雲端檔案';
   const started=performance.now(),context=this.uploadContext?{...this.uploadContext}:{};
@@ -37,7 +38,7 @@
   const request={name:'request',operation:stage,time:Date.now(),started,stage,stages:[]};
   this.performanceActive ||= new Map();const key=Symbol();this.performanceActive.set(key,request);
   return raw.apply(this,arguments).catch(error=>{
-   this.addPerformanceRecord(stage,started,(this.performanceRequestCount||0)-1,error.status===401?'授權失效':/逾時/.test(error.message)?'逾時':error.status?'HTTP '+error.status:'連線失敗',{stage,...context,method,...state,endVisibility:document.visibilityState,endOnline:navigator.onLine,failureKind:error.failureKind||'unknown',status:error.status||null,retryable:!!error.retryable,uncertain:!!error.uncertain});throw error;
+   this.addPerformanceRecord(stage,started,(this.performanceRequestCount||0)-1,error.status===401?'授權失效':/逾時/.test(error.message)?'逾時':error.status?'HTTP '+error.status:'連線失敗',{stage,...context,requests:1,method,...state,endVisibility:document.visibilityState,endOnline:navigator.onLine,failureKind:error.failureKind||'unknown',status:error.status||null,retryable:!!error.retryable,uncertain:!!error.uncertain});throw error;
   }).finally(()=>this.performanceActive.delete(key));
  };
  for(const [name,label]of Object.entries(labels)){
@@ -62,7 +63,7 @@
      if(this.lastIdleSyncReason===reason)return;
      this.lastIdleSyncReason=reason;
     }else if(name==='syncOffline')this.lastIdleSyncReason=null;
-    this.addPerformanceRecord(label,start,before,result,{stage:job.stage,stages:job.stages,queueMilliseconds:job.queueMilliseconds??0,executionMilliseconds:job.executionStarted?Math.round(performance.now()-job.executionStarted):Math.round(performance.now()-start),...(skipped&&busy?{busyOperation:busy.operation,busyMilliseconds:Math.round(performance.now()-busy.started)}:{})});
+    this.addPerformanceRecord(label,start,before,result,{requests:job.backgroundRequests??((this.performanceRequestCount||0)-before),requestScope:job.backgroundRequests!==undefined?'背景執行期間':'呼叫期間',stage:job.stage,stages:job.stages,queueMilliseconds:job.queueMilliseconds??0,executionMilliseconds:job.executionStarted?Math.round(performance.now()-job.executionStarted):Math.round(performance.now()-start),...(skipped&&busy?{busyOperation:busy.operation,busyMilliseconds:Math.round(performance.now()-busy.started)}:{})});
    };
    try{const result=original.apply(this,args);if(result&&typeof result.then==='function')return result.then(value=>{done(false,value);return value;},error=>{done(true);throw error;});done(false,result);return result;}
    catch(error){done(true);throw error;}

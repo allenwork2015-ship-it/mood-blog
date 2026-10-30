@@ -1,6 +1,6 @@
 /* Performance only: no changes to account selection, tokens or durable sync identity. */
 (()=>{'use strict';const p=BlogJournalApp.prototype,originalRequest=p.driveRequest,originalRaw=p.driveRequestRaw;
- const stats=window.DrivePerformance={build:'speed3',uploads:[],uploadBatches:[],compression:[],requests:0,bytes:0,blobCacheHits:0,previewHits:0,thumbnailHits:0,thumbnailFallbacks:0,loads:[],photos:[],connections:[]};
+ const stats=window.DrivePerformance={build:'speed4',uploads:[],uploadBatches:[],compression:[],requests:0,bytes:0,blobCacheHits:0,previewHits:0,thumbnailHits:0,thumbnailFallbacks:0,loads:[],photos:[],connections:[]};
  const blobs=new Map(),previews=new Map(),pending=new Map(),previewPending=new Map();let cacheToken=null,epoch=0;const versions=new Map();
  function reset(){epoch++;blobs.clear();previews.clear();pending.clear();previewPending.clear();versions.clear();cacheToken=app.driveToken;}
  function session(){if(cacheToken!==app.driveToken)reset();return epoch;}
@@ -24,7 +24,7 @@
 
  p.uploadEntryPhotos=async function(entry,folder,ids){
   const start=performance.now(),jobs=[];for(const[name,blob]of Object.entries(entry.images||{})){const location=await this.driveImageLocation(folder,name,entry);jobs.push({blob,id:ids[name],...location});}
-  let cursor=0,failure=null,active=0,peak=0;const work=async()=>{while(!failure&&cursor<jobs.length){const job=jobs[cursor++];active++;peak=Math.max(peak,active);try{await this.ensureOfflineFile(job.id,job.name,job.parent,job.blob.type||'application/octet-stream');await this.driveUpload(job.parent,job.name,job.blob,job.id);}catch(error){failure ||= error;}finally{active--;}}};
+  let cursor=0,failure=null,active=0,peak=0;const work=async()=>{while(!failure&&cursor<jobs.length){const job=jobs[cursor++];active++;peak=Math.max(peak,active);try{const file=await this.ensureOfflineFile(job.id,job.name,job.parent,job.blob.type||'application/octet-stream',job.blob);if(!file.contentUploaded)await this.driveUpload(job.parent,job.name,job.blob,job.id);}catch(error){failure ||= error;}finally{active--;}}};
   this.setUploadStage('上傳照片');await Promise.all(Array.from({length:Math.min(2,jobs.length)},work));stats.uploadBatches.unshift({photos:jobs.length,bytes:jobs.reduce((n,j)=>n+j.blob.size,0),milliseconds:Math.round(performance.now()-start),concurrency:peak,success:!failure});stats.uploadBatches.length=Math.min(30,stats.uploadBatches.length);if(failure)throw failure;
  };
  const compress=window.compressJournalPhoto;if(compress)window.compressJournalPhoto=async function(file){const start=performance.now();let result;try{return result=await compress(file);}finally{stats.compression.unshift({inputBytes:file.size,outputBytes:result?.size||0,milliseconds:Math.round(performance.now()-start),success:!!result});stats.compression.length=Math.min(50,stats.compression.length);}};

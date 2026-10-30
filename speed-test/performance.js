@@ -5,7 +5,7 @@
   if(this.backgroundJobs.has(key))return this.backgroundJobs.get(key);
   const job=[...(this.performanceActive?.values()||[])].reverse().find(job=>job.name===key),queued=performance.now();
   if(job){job.stage='等待背景工作';job.queueStarted=queued;}
-  const result=(this.backgroundTail||Promise.resolve()).catch(()=>{}).then(()=>{if(job){job.queueMilliseconds=Math.round(performance.now()-queued);job.executionStarted=performance.now();job.stage='實際執行';}return work();});
+  const result=(this.backgroundTail||Promise.resolve()).catch(()=>{}).then(async()=>{if(job){job.queueMilliseconds=Math.round(performance.now()-queued);job.executionStarted=performance.now();job.stage='實際執行';job.backgroundRequests=0;}const previous=this.executingBackgroundJob;this.executingBackgroundJob=job;try{return await work();}finally{this.executingBackgroundJob=previous;}});
   this.backgroundTail=result.catch(()=>{});this.backgroundJobs.set(key,result);
   result.then(()=>this.backgroundJobs.delete(key),()=>this.backgroundJobs.delete(key));return result;
  };
