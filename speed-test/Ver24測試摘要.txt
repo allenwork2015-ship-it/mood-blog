@@ -1,0 +1,1 @@
+詳見 Ver24驗證結果.json。列明的隔離測試通過，未宣稱真實 iPhone/Google Drive 實機驗證；未上傳 GitHub。

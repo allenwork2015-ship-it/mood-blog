@@ -1,0 +1,215 @@
+/* Explicit folder reconciliation: no automatic propagation of deletions. */
+BlogJournalApp.prototype.syncFolders = async function (automatic = false) {
+    if(navigator.locks)return navigator.locks.request('shiguang-offline-sync',{ifAvailable:true},lock=>lock?this.syncFoldersData(automatic):(automatic ? undefined : this.showToast('其他分頁正在同步，請稍後重試','error')));
+    return this.syncFoldersData(automatic);
+};
+BlogJournalApp.prototype.syncFoldersData = async function (automatic = false) {
+    if (automatic && (!this.isFolderSyncEnabled() || document.hidden || ['editorModal','viewModal'].some(id=>!document.getElementById(id).classList.contains('hidden')))) return;
+    if (automatic && (!this.rootDirHandle || !this.driveRoot || !navigator.onLine || !this.driveToken || Date.now() >= this.driveExpires || this.driveReadOnly || this.driveBusy)) return;
+    if (this.folderSyncBusy || this.driveBusy) return this.showToast('目前同步進行中，請稍候', 'error');
+    if (!this.rootDirHandle || !this.driveRoot || !navigator.onLine || this.driveReadOnly || Date.now() >= this.driveExpires) return this.showToast('請連接可寫入的本機資料夾與 Google Drive，並確認授權有效', 'error');
+    if((await this.offlineStore('all')).some(e=>e.status!=='synced'&&e.rootId===this.driveRoot.id))return this.showToast('請先完成目前待傳日記，再執行本機雲端同步，避免重複匯入','error');
+    const localRoot = this.rootDirHandle, cloudRoot = this.driveRoot.id;
+    const safe = value => typeof value === 'string' && value.length && !['.', '..'].includes(value) && !/[\\/\0]/.test(value);
+    const split = path => { const parts = path.split('/'); if (!parts.every(safe)) throw Error('不安全的檔案路徑'); return parts; };
+    const directory = async (path, create = false) => {let d = localRoot; for (const part of split(path)) d = await d.getDirectoryHandle(part, {create}); return d;};
+    const file = async (dir, path, create = false) => {const parts = split(path); let d = dir; for (const part of parts.slice(0,-1)) d = await d.getDirectoryHandle(part, {create}); return d.getFileHandle(parts.at(-1), {create});};
+    const write = async (dir, path, data) => {const handle = await file(dir,path,true), stream = await handle.createWritable(); await stream.write(data); await stream.close();};
+    const hash = async data => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', typeof data === 'string' ? new TextEncoder().encode(data) : await data.arrayBuffer())), v=>v.toString(16).padStart(2,'0')).join('');
+    const sign = async snap => {const list=[await hash(snap.md.replace(/<!-- shiguang-id: [A-Za-z0-9-]+ -->\n?/g, ''))];for(const name of Object.keys(snap.images).sort())list.push(name,await hash(snap.images[name]));return hash(JSON.stringify(list));};
+    const localSnapshot = async path => {
+        const dir = await directory(path), md = await (await (await dir.getFileHandle('note.md')).getFile()).text();
+        const parsed = this.parseMarkdownPost(path.split('/').at(-1),md), images={};
+        for(const name of new Set(this.imagePaths(parsed.content))) {
+            if (/^(https?:|data:)/i.test(name)) continue;
+            images[name]=await (await file(dir,name)).getFile();
+        }
+        const snap={md,images,parsed};snap.signature=await sign(snap);return snap;
+    };
+    const remoteSnapshot = async post => {
+        const md=await this.driveRequest('files/'+post.driveNote.id+'?alt=media&supportsAllDrives=true',{},'text'), images={};
+        const parsed=this.parseMarkdownPost(post.folderName,md);
+        for(const name of new Set(this.imagePaths(parsed.content))) {
+            if (/^(https?:|data:)/i.test(name)) continue;
+            if (!post.driveImages[name]) throw Error('雲端照片缺失：'+name);
+            split(name);
+            const imageId = post.driveImages[name];
+            const metadata = await this.driveRequest('files/'+imageId+'?fields=modifiedTime,md5Checksum,size,trashed&supportsAllDrives=true');
+            if (metadata.trashed) throw Error('雲端照片已刪除：'+name);
+            const stamp = metadata.md5Checksum || metadata.modifiedTime;
+            this.folderPhotoCache ||= new Map();
+            const key = imageId + ':' + stamp;
+            let blob = stamp ? this.folderPhotoCache.get(key) : null;
+            if (!blob) {
+                blob = await this.driveRequest('files/'+imageId+'?alt=media&supportsAllDrives=true',{},'blob');
+                if (stamp && blob.size <= 32 * 1024 * 1024) {
+                    const total = [...this.folderPhotoCache.values()].reduce((sum,b)=>sum+b.size,0);
+                    if (total + blob.size > 32 * 1024 * 1024) this.folderPhotoCache.clear();
+                    this.folderPhotoCache.set(key, blob);
+                }
+            }
+            images[name] = blob;
+        }
+        const version=await this.driveRequest('files/'+post.driveNote.id+'?fields=modifiedTime&supportsAllDrives=true');
+        if(version.modifiedTime!==post.driveNote.modifiedTime)throw Error('雲端正在更新，請稍後重新同步');
+        const snap={md,images,parsed,version:version.modifiedTime};snap.signature=await sign(snap);return snap;
+    };
+    let manifest, remotePosts=[], summary={download:0,upload:0,conflict:0,deleted:0,deferred:0};
+    const saveManifest = () => write(localRoot,'.shiguang-sync.json',JSON.stringify(manifest,null,2));
+    const backup = async (path,snap) => {const dir=await directory('.shiguang-backups/'+Date.now()+'-'+crypto.randomUUID().slice(0,8),true);await write(dir,'原位置.txt',path);
+        // Local rollback must retain attachments and unused photos as well as referenced images.
+        let original;try{original=await directory(path);}catch(error){if(error.name!=='NotFoundError')throw error;}
+        if(original){const copy=async(source,prefix='')=>{for await(const [name,handle]of source.entries()){if(!safe(name))throw Error('備份檔名無效');if(handle.kind==='directory')await copy(handle,prefix+name+'/');else await write(dir,prefix+name,await handle.getFile());}};await copy(original);}
+        for(const [name,blob] of Object.entries(snap.images))await write(dir,name,blob);await write(dir,'note.md',snap.md);};
+    const download = async (path,snap,previous) => {
+        if(previous) {const check=await localSnapshot(path);if(check.signature!==previous.signature)throw Error('本機文章在同步期間改變，未覆寫');await backup(path,previous);}
+        const dir=await directory(path,true);for(const [name,blob] of Object.entries(snap.images))await write(dir,name,blob);await write(dir,'note.md',snap.md);
+        summary.download++;
+    };
+    const upload = async (pair,snap,post,remote) => {
+        if(!pair.cloudId){const ids=await this.driveRequest('files/generateIds?count=2&space=drive&type=files');pair.cloudId=ids.ids[0];pair.noteId=ids.ids[1];await saveManifest();}
+        if(post)await backup('雲端原版／'+pair.path,remote);
+        const year=await this.driveFolder(cloudRoot,snap.parsed.date.slice(0,4));
+        const name=snap.parsed.date+'-'+snap.parsed.title.replace(/[\/\\?%*:|"<>]/g,'');
+        if(post){const latest=await this.driveRequest('files/'+pair.noteId+'?fields=modifiedTime&supportsAllDrives=true');if(latest.modifiedTime!==remote.version)throw Error('雲端版本改變，未覆寫');}
+        else await this.ensureOfflineFile(pair.cloudId,name,year.id,'application/vnd.google-apps.folder');
+        pair.imageIds ||= {};
+        for(const [imagePath,blob] of Object.entries(snap.images)){
+            const location=await this.driveImageLocation(pair.cloudId,imagePath);
+            const children=await this.driveChildren(location.parent);
+            const matches=children.filter(f=>f.name===location.name);
+            if(matches.length>1)throw Error('雲端同名照片重複：'+imagePath);
+            if(!pair.imageIds[imagePath]){
+                pair.imageIds[imagePath]=matches[0]?.id || (await this.driveRequest('files/generateIds?count=1&space=drive&type=files')).ids[0];
+                await saveManifest();
+            }
+            await this.ensureOfflineFile(pair.imageIds[imagePath],location.name,location.parent,blob.type||'application/octet-stream');
+            await this.driveUpload(location.parent,location.name,blob,pair.imageIds[imagePath]);
+        }
+        if(post){const check=await this.driveRequest('files/'+pair.noteId+'?fields=modifiedTime&supportsAllDrives=true');if(check.modifiedTime!==remote.version)throw Error('上傳期間雲端版本改變，未覆寫文字');}
+        else await this.ensureOfflineFile(pair.noteId,'note.md',pair.cloudId,'text/markdown');
+        await this.driveUpload(pair.cloudId,'note.md',new Blob([snap.md],{type:'text/markdown'}),pair.noteId);
+        pair.base=snap.signature;await saveManifest();summary.upload++;
+    };
+    this.folderConflicts = new Map();
+    const registerConflict = (pair,local,remote) => {
+        const key=pair.cloudId;
+        this.folderConflicts.set(key,{local:{...local.parsed,images:local.images},remote:{...remote.snap.parsed,images:remote.snap.images},resolve:async choice=>{
+            if(this.rootDirHandle!==localRoot||this.driveRoot?.id!==cloudRoot)throw Error('同步資料夾已變更，請重新比對');
+            const saved=JSON.parse(await(await(await localRoot.getFileHandle('.shiguang-sync.json')).getFile()).text());
+            if(JSON.stringify(saved)!==JSON.stringify(manifest))throw Error('同步紀錄已變更，請重新比對');
+            const nowLocal=await localSnapshot(pair.path),nowRemote=await remoteSnapshot(remote.post);
+            if(nowLocal.signature!==local.signature||nowRemote.signature!==remote.snap.signature)throw Error('日記已變更，請重新比對');
+            await this.saveConflictBackup({id:crypto.randomUUID(),title:local.parsed.title,content:local.md,images:local.images,remote:{content:remote.snap.md},cacheImages:remote.snap.images});
+            if(choice==='local')await upload(pair,nowLocal,remote.post,nowRemote);
+            else {
+                if(choice==='both') {
+                    const copy={...nowLocal,md:nowLocal.md.replace(/<!-- shiguang-id: [A-Za-z0-9-]+ -->\n?/g,'')};
+                    copy.md='<!-- shiguang-id: '+crypto.randomUUID()+' -->\n'+copy.md;
+                    await download(pair.path+'-copy-'+crypto.randomUUID().slice(0,8),copy);
+                }
+                const check=await remoteSnapshot(remote.post);if(check.signature!==nowRemote.signature)throw Error('雲端版本改變，未覆寫本機');
+                await download(pair.path,nowRemote,nowLocal);pair.base=nowRemote.signature;await saveManifest();
+            }
+            this.folderConflicts.delete(key);document.getElementById('folderConflictsBtn').hidden=!this.folderConflicts.size;
+            if(this.sourceMode==='local')await this.loadPostsFromFolder();await this.reloadDrivePosts();
+        }});
+        document.getElementById('folderConflictsBtn').hidden=false;
+    };
+    document.getElementById('folderConflictsBtn').hidden=true;
+    this.folderSyncBusy=true;this.driveBusy=true;
+    try {
+        if(await localRoot.queryPermission({mode:'readwrite'})!=='granted' && await localRoot.requestPermission({mode:'readwrite'})!=='granted')throw Error('未取得本機寫入權限');
+        if (!automatic) { this.closeEditor();this.closeViewModal(); }
+        try {manifest=JSON.parse(await (await (await localRoot.getFileHandle('.shiguang-sync.json')).getFile()).text());}
+        catch(error){if(error.name!=='NotFoundError')throw error;manifest={version:1,rootId:cloudRoot,pairs:[]};}
+        if(manifest.version!==1||manifest.rootId!==cloudRoot||!Array.isArray(manifest.pairs))throw Error('此本機資料夾已對應另一個雲端目的地，請使用原設定');
+        for(const pair of manifest.pairs){split(pair.path);if(pair.cloudId&&!/^[\w-]+$/.test(pair.cloudId))throw Error('同步對應識別碼無效');if(pair.noteId&&!/^[\w-]+$/.test(pair.noteId))throw Error('同步筆記識別碼無效');}
+        const localPaths=[];
+        const inspect=async(dir,path)=>{try{await dir.getFileHandle('note.md');localPaths.push(path);}catch(e){if(e.name!=='NotFoundError')throw e;}};
+        for await(const [name,entry] of localRoot.entries()){
+            if(entry.kind!=='directory'||name.startsWith('.'))continue;
+            if(/^\d{4}$/.test(name)){for await(const [child,dir]of entry.entries())if(dir.kind==='directory')await inspect(dir,name+'/'+child);}
+            else await inspect(entry,name);
+        }
+        remotePosts=await this.fetchDrivePosts(cloudRoot);
+        const locals=new Map();for(const path of localPaths)locals.set(path,await localSnapshot(path));
+        const remotes=new Map();for(const post of remotePosts)remotes.set(post.id,{post,snap:await remoteSnapshot(post)});
+        for (const snapshots of [[...locals.values()], [...remotes.values()].map(r=>r.snap)]) {
+            const ids = new Set();
+            for (const snap of snapshots) if (snap.parsed.journalId) {
+                if (ids.has(snap.parsed.journalId)) throw Error('有多篇日記使用相同識別碼，請手動確認後同步');
+                ids.add(snap.parsed.journalId);
+            }
+        }
+        for(const pair of manifest.pairs){
+            if(pair.retired)continue;
+            const remote = remotes.get(pair.cloudId);
+            const journalId = pair.journalId || remote?.snap.parsed.journalId;
+            if (journalId) {
+                const candidates = [...locals].filter(([path,snap]) => snap.parsed.journalId === journalId);
+                if (candidates.length > 1) { summary.conflict++; continue; }
+                if (candidates.length === 1) pair.path = candidates[0][0];
+                pair.journalId = journalId; await saveManifest();
+            }
+            split(pair.path);const local=locals.get(pair.path);
+            if(local&&remote){
+                if(local.signature===remote.snap.signature){pair.base=local.signature;await saveManifest();continue;}
+                if(!pair.base){registerConflict(pair,local,remote);summary.conflict++;continue;}
+                const l=local.signature!==pair.base,r=remote.snap.signature!==pair.base;
+                if(l&&r){registerConflict(pair,local,remote);summary.conflict++;continue;}
+                if(l)await upload(pair,local,remote.post,remote.snap);
+                else if(r){await download(pair.path,remote.snap,local);pair.base=remote.snap.signature;await saveManifest();}
+            }else if(local&&!remote&&!pair.base){await upload(pair,local);
+            }else if(!local&&remote&&pair.base){
+                if (automatic) { summary.deferred++; continue; }
+                if(confirm('本機已刪除「'+remote.snap.parsed.title+'」。是否將雲端文章與照片移至垃圾桶？')){await this.driveRequest('files/'+pair.cloudId+'?supportsAllDrives=true',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});pair.retired=true;await saveManifest();summary.deleted++;}
+            }else if(local&&!remote&&pair.base){
+                if (automatic) { summary.deferred++; continue; }
+                let gone=false;try{const state=await this.driveRequest('files/'+pair.cloudId+'?fields=trashed&supportsAllDrives=true');gone=state.trashed===true;}catch(e){if(e.status===404)throw Error('雲端文章無法存取，未判定刪除');throw e;}
+                if(gone&&confirm('雲端已刪除「'+local.parsed.title+'」。是否備份後刪除本機文章？')){
+                    const check=await localSnapshot(pair.path);if(check.signature!==local.signature)throw Error('本機已改變，未刪除');await backup(pair.path,local);
+                    const parts=split(pair.path),parent=parts.length===1?localRoot:await directory(parts.slice(0,-1).join('/'));await parent.removeEntry(parts.at(-1),{recursive:true});pair.retired=true;await saveManifest();summary.deleted++;
+                }
+            }else if(!local&&remote&&!pair.base){await download(pair.path,remote.snap);pair.base=remote.snap.signature;await saveManifest();}
+        }
+        const blockedLocalPaths = new Set();
+        // Preserve divergent first-time matches without generating new copies.
+        for(const [id,{post,snap}]of remotes){
+            if(manifest.pairs.some(p=>p.cloudId===id))continue;
+            if (automatic && !snap.parsed.journalId) { summary.deferred++; for (const [path,l] of locals) if (!l.parsed.journalId) blockedLocalPaths.add(path); continue; }
+            const matching=[...locals].filter(([path,l])=>(snap.parsed.journalId && l.parsed.journalId ? l.parsed.journalId===snap.parsed.journalId : l.signature===snap.signature)&&!manifest.pairs.some(p=>p.path===path));
+            if (!matching.length) {
+                const sameDiary = [...locals].filter(([path,l]) => !(l.parsed.journalId && snap.parsed.journalId && l.parsed.journalId !== snap.parsed.journalId) && l.parsed.title === snap.parsed.title && l.parsed.date === snap.parsed.date);
+                if (sameDiary.length) {
+                    sameDiary.forEach(([path]) => blockedLocalPaths.add(path));
+                    if(sameDiary.length===1 && !manifest.pairs.some(p=>p.path===sameDiary[0][0])) {
+                        const pair={path:sameDiary[0][0],cloudId:id,noteId:post.driveNote.id,base:null};manifest.pairs.push(pair);await saveManifest();registerConflict(pair,sameDiary[0][1],{post,snap});
+                    }
+                    summary.conflict++;
+                    continue;
+                }
+            }
+            let path;
+            if (matching.length > 1) { matching.forEach(([p]) => blockedLocalPaths.add(p)); summary.conflict++; continue; }
+            if(matching.length===1)path=matching[0][0];
+            else {const folder=post.folderName;if(!safe(folder))throw Error('雲端資料夾名稱無法儲存');path=(post.yearFolder||snap.parsed.date.slice(0,4))+'/'+folder;
+                try{await directory(path);path+='-drive-'+id.slice(-8);await directory(path);throw Error('匯入目的地已存在，未覆寫');}catch(e){if(e.name!=='NotFoundError')throw e;}
+                await download(path,snap);
+            }
+            const localMatch = locals.get(path);
+            const diverged = localMatch && localMatch.signature !== snap.signature;
+            if (diverged) summary.conflict++;
+            manifest.pairs.push({cloudId:id,noteId:post.driveNote.id,path,journalId:snap.parsed.journalId || localMatch?.parsed.journalId,base:diverged ? null : snap.signature});await saveManifest();
+            if(diverged)registerConflict(manifest.pairs.at(-1),localMatch,{post,snap});
+        }
+        for(const [path,snap]of locals){if(blockedLocalPaths.has(path)||manifest.pairs.some(p=>p.path===path))continue;if (automatic && !snap.parsed.journalId) { summary.deferred++; continue; } const pair={path,journalId:snap.parsed.journalId};manifest.pairs.push(pair);await saveManifest();await upload(pair,snap);}
+        if (summary.deferred) this.showToast('部分日記需確認配對或刪除，請按「立即同步」手動處理', 'error');
+        this.recordOperation('本機與雲端', automatic ? '自動雙向同步' : '雙向同步', summary.conflict ? '完成但有衝突' : '成功', `下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、衝突 ${summary.conflict}`);
+        if (!automatic || summary.conflict) this.showToast(`同步完成：下載 ${summary.download}、上傳 ${summary.upload}、刪除 ${summary.deleted}、雙邊修改 ${summary.conflict} 篇（保留兩邊，請手動比較）`);
+    } catch(error){this.recordOperation('本機與雲端',automatic ? '自動雙向同步' : '雙向同步','失敗',error.message);this.showToast('同步停止，既有資料保留：'+error.message,'error');}
+    finally {
+        this.releasePostImages(remotePosts);this.folderSyncBusy=false;this.driveBusy=false;
+        try{if(summary.download || summary.deleted){if(this.sourceMode==='local')await this.loadPostsFromFolder();}if(summary.upload || summary.deleted)await this.reloadDrivePosts();}catch(e){this.showToast('請重新讀取列表：'+e.message,'error');}
+    }
+};
