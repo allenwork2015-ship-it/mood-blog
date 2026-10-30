@@ -263,7 +263,7 @@
     </button>
 
     <footer class="bg-warm-100 dark:bg-stone-900 border-t border-warm-200 dark:border-darkBorder mt-16 py-6 sm:py-8 text-center text-xs text-warm-500 dark:text-stone-400 transition-colors">
-        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 24</span></p>
+        <p>拾光手札 &copy; 2026 · <span data-release-version>Ver 24・效能測試 speed2</span></p>
     </footer>
 
     <!-- 操作手冊 Modal -->
@@ -1823,13 +1823,7 @@
                                 const name = entry.date + '-' + entry.title.replace(/[\/\\?%*:|"<>]/g, '') + '-offline-' + entry.id.slice(0,8);
                                 this.setUploadStage('建立或確認日記資料夾');
                                 await this.ensureOfflineFile(entry.ids.folder, name, year.id, 'application/vnd.google-apps.folder');
-                                for (const [imageName, blob] of Object.entries(entry.images)) {
-                                    this.setUploadStage('建立或確認照片位置');
-                                    const location = await this.driveImageLocation(entry.ids.folder, imageName, entry);
-                                    await this.ensureOfflineFile(entry.ids.images[imageName], location.name, location.parent, blob.type || 'application/octet-stream');
-                                    this.setUploadStage('上傳照片內容');
-                                    await this.driveUpload(location.parent, location.name, blob, entry.ids.images[imageName]);
-                                }
+                                await this.uploadEntryPhotos(entry, entry.ids.folder, entry.ids.images);
                                 const mood = this.getMoodObj(entry.mood), category = this.getCategoryObj(entry.category);
                                 const markdown=JournalPersistence.serialize({...entry,journalId:entry.journalId || entry.id});
                                 this.setUploadStage('建立或確認日記文字檔');
@@ -1852,8 +1846,8 @@
                         }
                         if (changed) {
                             // Refresh the list without closing a reader or an editor opened during upload.
-                            const posts = await this.fetchDrivePosts(this.driveRoot.id);
-                            const old = this.drivePosts;
+                            const posts = await this.refreshUploadedPosts();
+                            const old = (this.drivePosts || []).filter(post => !posts.includes(post));
                             this.drivePosts = posts;
                             if (this.sourceMode === 'drive') this.posts = posts;
                             if (this.viewPostId && old.some(p => p.id === this.viewPostId)) {
@@ -2295,7 +2289,7 @@
                     entry.editImageIds ||= {};
                     const missing=Object.keys(entry.images).filter(name=>!entry.editImageIds[name]);
                     if(missing.length){const result=await this.driveRequest('files/generateIds?count='+missing.length+'&space=drive&type=files');if(!Array.isArray(result.ids)||result.ids.length!==missing.length||result.ids.some(id=>typeof id!=='string'||!id))throw new Error('未取得完整的照片識別碼，尚未建立雲端資料');missing.forEach((name,i)=>entry.editImageIds[name]=result.ids[i]);await this.offlineStore('put',entry);}
-                    for(const [name,blob] of Object.entries(entry.images)){this.setUploadStage('上傳修改照片');const location=await this.driveImageLocation(target.folderId,name,entry);await this.ensureOfflineFile(entry.editImageIds[name],location.name,location.parent,blob.type||'application/octet-stream');await this.driveUpload(location.parent,location.name,blob,entry.editImageIds[name]);}
+                    await this.uploadEntryPhotos(entry,target.folderId,entry.editImageIds);
                     const check=await this.driveRequest('files/'+target.noteId+'?fields=modifiedTime&supportsAllDrives=true');
                     if(check.modifiedTime!==target.version){entry.conflict=true;entry.remoteConflictContent=await this.driveRequest('files/'+target.noteId+'?alt=media&supportsAllDrives=true',{},'text');throw new Error('上傳期間雲端版本改變；修改已保留，請處理衝突');}
                     this.setUploadStage('上傳修改文字');
@@ -2387,7 +2381,7 @@
     <script src="./performance.js?v=24"></script>
     <script src="./diagnostics.js?v=24"></script>
     <script src="./lazy-photos.js?v=24"></script>
-    <script src="./drive-performance.js?v=24-loading1"></script>
+    <script src="./drive-performance.js?v=24-speed2"></script>
     <script>
         const app = new BlogJournalApp();
     </script>
