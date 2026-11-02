@@ -6,6 +6,7 @@
  root.innerHTML='<div id="bookHomeSpread"></div><div class="book-home-nav"><button id="bookHomePrev" type="button">上一頁</button><span id="bookHomePosition" role="status"></span><button id="bookHomeNext" type="button">下一頁</button><label class="book-jump-label">跳至 <input id="bookHomeJump" type="number" min="1" value="1" aria-label="跳至頁碼"> 頁</label><button id="bookHomeJumpGo" type="button">前往</button></div><div class="book-home-quick"><select id="bookHomeJournal" aria-label="跳至日記"></select><button id="bookHomeCleanEmpty" type="button">清除本篇空白頁</button></div>';
  root.insertAdjacentHTML('afterbegin','<p class="book-touch-help">單指左右翻頁；點文字編輯，先點照片再拖曳編排。</p>');
  root.insertAdjacentHTML('beforeend','<p id="bookHomeEditHint" class="book-window-readonly" hidden>此日記為唯讀，無法清除空白頁。</p>');document.getElementById('postsContainer').before(root);
+ const layoutNotice=document.createElement('p');layoutNotice.id='bookLayoutNotice';layoutNotice.hidden=true;layoutNotice.setAttribute('role','status');layoutNotice.style.cssText='padding:8px;font-size:13px;color:#9a642f';document.getElementById('bookHomeSpread').before(layoutNotice);
  const tabs=document.createElement('div');tabs.className='book-home-tabs';tabs.setAttribute('role','group');tabs.setAttribute('aria-label','日記瀏覽模式');tabs.innerHTML='<button id="bookListMode" type="button" aria-pressed="true">列表模式</button><button id="bookReadMode" type="button" aria-pressed="false">日記本模式</button>';root.before(tabs);
  let enabled=false,leaves=[],index=0,signature='',epoch=0,observer=null,timer,workers=0,renderedCount=0;
  const queue=[],cache=new Map(),ownedURLs=new Set(),readyPhotos=new Map(),remoteURLs=new Map(),remoteBytes=new Map();let warmTimer=null,warmBusy=false,readyBytes=0;const photoKey=(post,path)=>(post.journalId||post.id)+'|'+path;let journalSignature='';
@@ -43,7 +44,7 @@
  function sizeSlot(slot){slot.style.width=geometry.width+'px';slot.style.height=(560*geometry.scale)+'px';slot.firstElementChild.style.transform='scale('+geometry.scale+')';}
  function show(){
   if(!enabled)return;metrics.pageRenders++;observer?.disconnect();queue.splice(0);
-  const host=document.getElementById('bookHomeSpread');resize();const fragment=document.createDocumentFragment(),n=count();renderedCount=n;index=alignIndex(Math.min(Math.max(0,index),Math.max(0,leaves.length-1)));const visible=spreadAt(index);
+  const host=document.getElementById('bookHomeSpread');resize();const fragment=document.createDocumentFragment(),n=count();renderedCount=n;index=alignIndex(Math.min(Math.max(0,index),Math.max(0,leaves.length-1)));const visible=spreadAt(index);layoutNotice.hidden=!visible.some(leaf=>leaf&&(leaf.page.syncWarning||window.FreeBookEditor?.pages(leaf.post).some(page=>page.syncWarning)));layoutNotice.textContent=layoutNotice.hidden?'':'原排版已保留，部分文字無法自動對應，請確認日記本內容。';
   document.getElementById('bookHomePrev').disabled=index===0;document.getElementById('bookHomeNext').disabled=nextStart(1)>=leaves.length;
   document.getElementById('bookHomePosition').textContent=leaves.length?(index+1)+'－'+Math.min(index+visible.filter(Boolean).length,leaves.length)+'／'+leaves.length+' 頁':'尚無符合的日記';
   updateQuick();

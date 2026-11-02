@@ -43,7 +43,7 @@
   const start=()=>{page={id:result.length?uid():source.id,text:'',photos:[],autoFlow:false,textTop:m.top};result.push(page);used=0;};start();
   const tokens=source.text.split(/(!\[[^\]]*\]\([^)]+\))/g);
   for(const token of tokens){const match=token.match(/^!\[[^\]]*\]\(([^)]+)\)$/);
-   if(match){const item=source.photos.find(p=>p.path===match[1]);if(!item)continue;item.width=Math.min(300,Math.max(120,item.width||200));let h=photoHeight(item),lines=Math.ceil((h+18)/m.line);if(used+lines>m.lines)start();item.x=(400-item.width)/2;item.y=m.top+used*m.line+6;delete item.autoPlace;page.photos.push(item);page.text+='\n'+match[0]+'\n'+'\n'.repeat(lines);used+=lines;}
+   if(match){const item=source.photos.find(p=>p.path===match[1]);if(!item)continue;item.width=Math.min(300,Math.max(120,item.width||200));let h=Number(item.aspect)>0?photoHeight(item):292+(item.caption?26:0),lines=Math.ceil((h+18)/m.line);if(used+lines>m.lines)start();item.x=(400-item.width)/2;item.y=m.top+used*m.line+6;delete item.autoPlace;page.photos.push(item);page.text+='\n'+match[0]+'\n'+'\n'.repeat(lines);used+=lines;}
    else if(token.trim()){let remaining=token.trim();while(remaining){if(used>=m.lines)start();const chunks=[...pieces(remaining,{...m,lines:Math.max(1,m.lines-used)})],part=chunks[0];page.text+=(page.text&&!page.text.endsWith('\n')?'\n':'')+part.head;used+=part.lines;remaining=chunks.slice(1).map(p=>p.head).join('');if(remaining)start();}}
   }
   pages.splice(0,pages.length,...result);return {added:result.length-1,metrics:m};

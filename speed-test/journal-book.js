@@ -17,7 +17,7 @@
   return {meta,body,error};
  }
  function pagesOf(content) {
-  const d=decode(content);if(d.meta?.version===2&&d.meta.body===d.body)return structuredClone(d.meta.pages).map(p=>({...p,autoFlow:p.flow===true}));if(d.meta?.version===2&&d.meta.body!==d.body)return [{id:uid(),text:d.body,photos:[],autoFlow:true,orderedFlow:true}];const markers=[...d.body.matchAll(pageMarker)];
+  const d=decode(content);if(d.meta?.version===2){const pages=structuredClone(d.meta.pages).map(p=>({...p,autoFlow:p.flow===true,syncWarning:!!(p.syncWarning||d.meta.pendingTextSync)}));return d.meta.body===d.body?pages:reconcilePages(pages,d.meta.body,d.body,d.meta.retained||[]);}const markers=[...d.body.matchAll(pageMarker)];
   if(!markers.length)return [{id:d.meta?.pages[0]?.id||uid(),text:d.body,photos:d.meta?.pages[0]?.photos||[],autoFlow:!d.meta||d.meta.pages[0]?.flow===true,orderedFlow:!d.meta}];
   const pages=markers.map((m,i)=>({id:m[1],text:d.body.slice(m.index+m[0].length,markers[i+1]?.index??d.body.length).trim(),photos:d.meta?.pages.find(p=>p.id===m[1])?.photos||[],autoFlow:!d.meta||d.meta.pages.find(p=>p.id===m[1])?.flow===true}));
   const leading=d.body.slice(0,markers[0].index).trim();if(leading)pages[0].text=leading+'\n\n'+pages[0].text;
@@ -58,15 +58,57 @@
   const anchors=body.slice(start,end).match(/!\[[^\]]*\]\(([^)]+)\)/g)||[];
   return body.slice(0,start)+afterText.slice(from,to)+(anchors.length?'\n'+anchors.join('\n')+'\n':'')+body.slice(end);
  }
- function pack(pages,retained=[],source){
+
+ function layoutUnits(value){const out=[];for(const m of String(value).matchAll(/!\[[^\]]*\]\(([^)]+)\)|\S/gu))if(!m[0].startsWith('!['))out.push({c:m[0],at:m.index,end:m.index+m[0].length});return out;}
+ function normalized(value){return layoutUnits(value).map(u=>u.c).join('');}
+ function boundedDiff(a,b){
+  if(a.length+b.length>100000)return null;const frontier=new Map([[1,0]]),trace=[];
+  for(let distance=0;distance<=Math.min(128,a.length+b.length);distance++){
+   trace.push(new Map(frontier));
+   for(let k=-distance;k<=distance;k+=2){const left=frontier.get(k-1)??-Infinity,right=frontier.get(k+1)??-Infinity;let x=k===-distance||(k!==distance&&left<right)?Math.max(0,right):left+1,y=x-k;while(x<a.length&&y<b.length&&a[x]===b[y]){x++;y++;}frontier.set(k,x);
+    if(x>=a.length&&y>=b.length){const result=[];for(let d=trace.length-1;d>=0;d--){const v=trace[d],key=x-y,prevKey=key===-d||(key!==d&&(v.get(key-1)??-Infinity)<(v.get(key+1)??-Infinity))?key+1:key-1,prevX=v.get(prevKey)??0,prevY=prevX-prevKey;while(x>prevX&&y>prevY){result.push('=');x--;y--;}if(!d)break;if(x===prevX){result.push('+');y--;}else{result.push('-');x--;}}return result.reverse();}
+   }
+  }return null;
+ }
+ function reconcilePages(input,oldBody,newBody,retained=[]){
+  const pages=structuredClone(input),old=layoutUnits(oldBody||''),next=layoutUnits(newBody),flat=pages.flatMap((page,index)=>layoutUnits(page.text).map(unit=>({...unit,page:index}))),same=old.map(u=>u.c).join('')===next.map(u=>u.c).join('');
+  if(!same){
+   let ops=old.map(u=>u.c).join('')===flat.map(u=>u.c).join('')?boundedDiff(old.map(u=>u.c),next.map(u=>u.c)):null;
+   if(ops){const reverse=boundedDiff(old.map(u=>u.c).reverse(),next.map(u=>u.c).reverse());const distribution=sequence=>{const counts=pages.map(()=>[0,0]);let from=0;for(const op of sequence){if(op==='=')from++;else if(op==='-'){counts[flat[from].page][0]++;from++;}else counts[flat[from]?.page??flat.at(-1)?.page??0][1]++;}return JSON.stringify(counts);};if(!reverse||distribution(ops)!==distribution(reverse.reverse()))ops=null;}
+   if(!ops){for(const page of pages)page.syncWarning=true;}
+   else{
+    const patches=pages.map(()=>({remove:new Map(),insert:new Map()}));let from=0,to=0;
+    for(let i=0;i<ops.length;){if(ops[i]==='='){from++;to++;i++;continue;}const start=from,newStart=to;while(i<ops.length&&ops[i]!=='='){if(ops[i]==='-')from++;else to++;i++;}
+     for(let n=start;n<from;n++){const u=flat[n];patches[u.page].remove.set(u.at,u.end);}
+     if(to>newStart){const text=plain(newBody.slice(next[newStart].at,next[to-1].end)),anchor=flat[start],last=flat.at(-1),index=anchor?.page??last?.page??0,at=anchor?.at??last?.end??0;patches[index].insert.set(at,(patches[index].insert.get(at)||'')+text);}
+    }
+    for(let n=0;n<pages.length;n++){const original=pages[n].text,patch=patches[n];let text='';for(let at=0;at<=original.length;){text+=patch.insert.get(at)||'';if(at===original.length)break;const end=patch.remove.get(at);if(end!==undefined)at=end;else{text+=original[at];at++;}}pages[n].text=text;}
+    if(normalized(pages.map(p=>p.text).join(''))!==normalized(newBody)){return input.map(page=>({...structuredClone(page),syncWarning:true}));}
+   }
+  }
+  const existing=new Set([...String(oldBody||'').matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(m=>m[1]).concat(retained,pages.flatMap(page=>[...page.text.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(m=>m[1])))),added=[];
+  for(const match of newBody.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g))if(!existing.has(match[1])){existing.add(match[1]);added.push(match[0]);}
+  if(added.length)pages.push({id:uid(),text:added.join('\n'),photos:[],autoFlow:true});return pages;
+ }
+ function editBookText(source,beforeText,afterText,context={}){
+  const body=decode(source).body.replace(pageMarker,'\n\n'),all=layoutUnits(body),before=layoutUnits(beforeText),after=layoutUnits(afterText),find=before.map(u=>u.c).join(''),haystack=all.map(u=>u.c).join('');if(find===after.map(u=>u.c).join(''))return body;
+  const page=context.pages?.findIndex(p=>p.id===context.pageId)??-1,hint=page<0?-1:context.pages.slice(0,page).reduce((n,p)=>n+layoutUnits(p.text).length,0);let offset=hint;
+  if(hint<0||all.slice(hint,hint+before.length).map(u=>u.c).join('')!==find){const at=haystack.indexOf(find);if(at<0||(find&&haystack.indexOf(find,at+1)!==-1))throw Error('這段文字無法唯一對應正文，原排版仍保留；請用一般編輯修改。');offset=Array.from(haystack.slice(0,at)).length;}
+  const ops=boundedDiff(before.map(u=>u.c),after.map(u=>u.c));if(!ops)throw Error('本次文字變更較大，原排版仍保留；請用一般編輯修改。');const remove=new Map(),insert=new Map();let from=0,to=0;
+  for(let i=0;i<ops.length;){if(ops[i]==='='){from++;to++;i++;continue;}const start=from,newStart=to;while(i<ops.length&&ops[i]!=='='){if(ops[i]==='-')from++;else to++;i++;}for(let n=start;n<from;n++){const unit=all[offset+n];if(!unit)throw Error('正文對應已改變，請重新開啟編輯。');remove.set(unit.at,unit.end);}if(to>newStart){const at=all[offset+start]?.at??all.at(-1)?.end??0,value=plain(afterText.slice(after[newStart].at,after[to-1].end));insert.set(at,(insert.get(at)||'')+value);}}
+  let result='';for(let at=0;at<=body.length;){result+=insert.get(at)||'';if(at===body.length)break;const end=remove.get(at);if(end!==undefined)at=end;else{result+=body[at];at++;}}return result;
+ }
+ function composeList(body,transport){if(!transport)return body;const source=body+'\n\n<!-- shiguang-book: '+encode(transport)+' -->';return pack(pagesOf(source),transport.retained||[],body,{appendNewPhotos:false});}
+ function pack(pages,retained=[],source,options={}){
   const body=source===undefined?pages.map(p=>p.text.trim()).join('\n\n'):decode(source).body.replace(pageMarker,'\n\n');
   const known=new Set([...body.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(m=>m[1]));
-  const added=[];for(const p of pages)for(const m of p.text.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g))if(!known.has(m[1])){known.add(m[1]);added.push(m[0]);}
-  const canonical=(body+(added.length?'\n\n'+added.join('\n\n'):'')).trim();
-  return canonical+'\n\n<!-- shiguang-book: '+encode({version:2,body:canonical,retained,pages:pages.map(p=>({id:p.id,text:p.text,photos:p.photos,flow:p.autoFlow===true}))})+' -->';
+  const assets=new Set([...(decode(source||'').meta?.retained||[]),...(options.knownAssets||[])]);
+  const added=[];for(const p of pages)for(const m of p.text.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g))if(!known.has(m[1])&&!assets.has(m[1])&&options.appendNewPhotos!==false){known.add(m[1]);added.push(m[0]);}
+  const canonical=(body+(added.length?'\n\n'+added.join('\n\n'):'')).trim(),pending=pages.some(p=>p.syncWarning)&&normalized(pages.map(p=>p.text).join(''))!==normalized(canonical);
+  return canonical+'\n\n<!-- shiguang-book: '+encode({version:2,layoutMode:'independent',body:canonical,retained:[...new Set([...retained,...known,...pages.flatMap(p=>p.photos.map(photo=>photo.path))])],pendingTextSync:pending,pages:pages.map(p=>({id:p.id,text:p.text,photos:p.photos,flow:p.autoFlow===true,syncWarning:pending}))})+' -->';
  }
  const visible=s=>decode(s).body.replace(pageMarker,'\n\n');
- window.JournalBookFormat={decode,pagesOf,pack,visible,editText};
+ window.JournalBookFormat={decode,pagesOf,pack,visible,editText,editBookText,composeList,reconcilePages,textSignature:signature};
  const p=BlogJournalApp.prototype;
  const imagePaths=p.imagePaths;p.imagePaths=function(content){return [...new Set([...imagePaths.call(this,content),...(decode(content).meta?.retained||[]).filter(path=>typeof path==='string')])];};
  const parse=p.parseMarkdownPost;
@@ -75,7 +117,7 @@
  const byId=id=>document.getElementById(id);
  let state=null, generation=0, saveChain=Promise.resolve(), urls=[];
  const photoCache=new Map(),photoQueue=[];let photoWorkers=0,photoSession=0;
- const stats=window.JournalBookDiagnostics={draws:0,draftWrites:0,photoRequests:0,activePhotos:0};
+ const stats=window.JournalBookDiagnostics={layoutMode:'independent',draws:0,draftWrites:0,photoRequests:0,activePhotos:0};
  function release(){photoSession++;urls.forEach(URL.revokeObjectURL);urls=[];photoCache.clear();document.querySelectorAll('.book-photo-controls').forEach(menu=>menu.remove());while(photoQueue.length)photoQueue.shift().resolve('');}
  function resizePaper(host){if(!host)return;const paper=host.querySelector('.book-paper'),wrap=host.querySelector('.book-paper-wrap');if(!paper||!wrap)return;const scale=Math.min(1,Math.max(0.3,host.clientWidth/420));paper.style.transform='scale('+scale+')';wrap.style.height=(560*scale)+'px';}
  let resizeTimer;
@@ -91,7 +133,7 @@
  const fields=['postTitle','postDate','postMood','postCategory'];
  function key(){const cloud=app.offlineNew||app.sourceMode==='drive';return JSON.stringify([cloud?'cloud':'local',cloud?(app.driveRoot?.id||app.getDriveConfig().folderId||'unconnected'):JournalPersistence.rootKey(app.rootDirHandle),byId('editPostId').value||app.offlineEditingId||'new']);}
  function legacyKey(){return [app.sourceMode,app.sourceMode==='local'?(app.rootDirHandle?.name||'local'):(app.driveRoot?.id||app.getDriveConfig().folderId||'cloud'),byId('editPostId').value||app.offlineEditingId||'new'].join(':');}
- function composed(){const body=decode(byId('postContent').value).body;return state?.transport?body+'\n\n<!-- shiguang-book: '+encode(state.transport)+' -->':byId('postContent').value;}
+ function composed(){const body=decode(byId('postContent').value).body;return state?.transport?composeList(body,state.transport):byId('postContent').value;}
  const pendingDrafts=new Map();let draftRunning=false;
  function draft(){if(!state)return;const snapshot={content:composed(),fields:Object.fromEntries(fields.map(id=>[id,byId(id).value])),images:{...app.stagedImages},at:Date.now()};const k=state.key;pendingDrafts.set(k,snapshot);if(draftRunning)return;draftRunning=true;saveChain=(async()=>{try{while(pendingDrafts.size){const [key,value]=pendingDrafts.entries().next().value;pendingDrafts.delete(key);try{await store('put',key,value);stats.draftWrites++;if(state?.key===key&&!pendingDrafts.has(key))byId('bookStatus').textContent='草稿已保存；儲存日記後同步。';}catch(e){app.showToast('草稿未保存：'+e.message,'error');}}}finally{draftRunning=false;}})();}
  function flush(){if(state?.editing){const raw=pack(state.pages,state.retained,composed()),d=decode(raw);state.transport=d.meta;byId('postContent').value=d.body;draft();}}
@@ -124,7 +166,7 @@
   const scale=Math.min(1,Math.max(0.3,host.clientWidth/420));paper.style.transform='scale('+scale+')';wrap.style.height=(560*scale)+'px';
   const text=document.createElement(editing?'textarea':'div');text.className='book-text';
   const plain=page.text.replace(/!\[.*?\]\(((?:[^()]|\([^()]*\))*)\)/g,'');
-  if(editing){if(matchMedia('(any-pointer:coarse)').matches)text.readOnly=true;let semanticText=plain;const applyText=()=>{byId('postContent').value=editText(composed(),semanticText,text.value,{pages:state.pages,pageId:page.id});semanticText=text.value;};text.value=plain;text.setAttribute('aria-label','此頁文字');text.onchange=()=>{delete text.dataset.mobileEditError;try{applyText();}catch(error){text.dataset.mobileEditError=error.message;app.showToast(error.message,'error');return;}const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');flush();renderEditor();};let flowTimer;text.oninput=()=>{clearTimeout(flowTimer);flowTimer=setTimeout(()=>{if(!text.isConnected||!state?.editing)return;try{applyText();}catch(error){text.dataset.mobileEditError=error.message;app.showToast(error.message,'error');return;}const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');const result=window.JournalPagination?.paginate(pages,{title:byId('postTitle').value,date:byId('postDate').value,mood:byId('postMood').value});flush();if(result?.added){renderEditor();const node=byId('bookCanvas').querySelector('textarea');node?.focus();}},180);};}
+  if(editing){if(matchMedia('(any-pointer:coarse)').matches)text.readOnly=true;let semanticText=plain;const applyText=()=>{byId('postContent').value=editBookText(composed(),semanticText,text.value,{pages:state.pages,pageId:page.id});semanticText=text.value;};text.value=plain;text.setAttribute('aria-label','此頁文字');text.onchange=()=>{delete text.dataset.mobileEditError;try{applyText();}catch(error){text.dataset.mobileEditError=error.message;app.showToast(error.message,'error');return;}const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');flush();renderEditor();};let flowTimer;text.oninput=()=>{clearTimeout(flowTimer);flowTimer=setTimeout(()=>{if(!text.isConnected||!state?.editing)return;try{applyText();}catch(error){text.dataset.mobileEditError=error.message;app.showToast(error.message,'error');return;}const refs=app.imagePaths(page.text);page.text=text.value+'\n'+refs.map(path=>'![照片]('+path+')').join('\n');const result=window.JournalPagination?.paginate(pages,{title:byId('postTitle').value,date:byId('postDate').value,mood:byId('postMood').value});flush();if(result?.added){renderEditor();const node=byId('bookCanvas').querySelector('textarea');node?.focus();}},180);};}
   else text.textContent=plain;paper.append(text);
   for(const item of placements(page).slice().sort((a,b)=>(b.z||0)-(a.z||0))){
    const node=document.createElement('div');node.className='book-photo';node.dataset.photo=item.id;
@@ -172,7 +214,7 @@
   byId('bookCanvas').replaceChildren();byId('bookTools').hidden=true;byId('postContent').hidden=false;
   byId('inlineImageInput').closest('label').style.display='';
   byId('bookToggle').textContent='日記本編排';byId('bookStatus').textContent=d.error?'編排資料無法解析，已保留原文：'+d.error:'點選照片即可調整，完成後自動保存草稿。';
-  byId('bookToggle').disabled=!!d.error;
+  byId('bookToggle').disabled=!!d.error;if(state.pages.some(page=>page.syncWarning))byId('bookStatus').textContent='原排版已保留，部分文字無法自動對應，請確認日記本內容。';
  }
  const open=p.openEditor;p.openEditor=function(...args){const result=open.apply(this,args);if(!byId('editorModal').classList.contains('hidden'))setup();return result;};
  const editOffline=p.editOfflineEntry;p.editOfflineEntry=async function(...args){const result=await editOffline.apply(this,args);if(!byId('editorModal').classList.contains('hidden'))setup();return result;};
