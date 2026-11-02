@@ -133,7 +133,7 @@
    const caption=document.createElement('span');caption.className='book-caption';node.append(caption);
    const style=()=>{node.style.cssText='left:'+Math.max(0,Math.min(390,item.x))+'px;top:'+Math.max(0,Math.min(520,item.y))+'px;width:'+Math.max(60,Math.min(380,item.width))+'px;transform:rotate('+item.rotate+'deg);z-index:'+(item.layer==='behind'?1:20+Math.max(0,Math.min(100,item.z)));node.classList.toggle('book-frameless',item.frame==='none');caption.textContent=item.caption||'';overlay.style.cssText='left:'+node.style.left+';top:'+node.style.top+';width:'+node.style.width+';height:'+node.offsetHeight+'px;transform:'+node.style.transform;};style();paper.append(node);style();
    img.onload=()=>{if(token===generation)style();};
-   photoURL(item.path,post,token).then(url=>{if(token===generation){if(url)img.src=url;else img.alt='照片暫時無法載入';}}).catch(e=>{if(token===generation){img.alt='照片載入失敗；可重新開啟再試';app.showToast(e.message,'error');}});
+   photoURL(item.path,post,token).then(url=>{if(token===generation){if(url){img.src=url;window.ProgressivePhotos?.attach(img,post,item.path,()=>token===generation&&!byId('editorModal').classList.contains('hidden'));}else img.alt='照片暫時無法載入';}}).catch(e=>{if(token===generation){img.alt='照片載入失敗；可重新開啟再試';app.showToast(e.message,'error');}});
    if(!editing)continue;
    const controls=document.createElement('div');controls.className='book-photo-controls';controls.hidden=true;
    const action=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=e=>{e.stopPropagation();fn();style();flush();controls.hidden=true;};controls.append(b);return b;};

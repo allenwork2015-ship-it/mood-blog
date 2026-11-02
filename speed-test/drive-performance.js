@@ -1,6 +1,6 @@
 /* Performance only: no changes to account selection, tokens or durable sync identity. */
 (()=>{'use strict';const p=BlogJournalApp.prototype,originalRequest=p.driveRequest,originalRaw=p.driveRequestRaw;
- const stats=window.DrivePerformance={build:'speed4',uploads:[],uploadBatches:[],compression:[],requests:0,bytes:0,blobCacheHits:0,previewHits:0,thumbnailHits:0,thumbnailFallbacks:0,loads:[],photos:[],connections:[]};
+ const stats=window.DrivePerformance={build:'speed5',uploads:[],uploadBatches:[],compression:[],requests:0,bytes:0,blobCacheHits:0,previewHits:0,thumbnailHits:0,thumbnailFallbacks:0,loads:[],photos:[],connections:[]};
  const blobs=new Map(),previews=new Map(),pending=new Map(),previewPending=new Map();let cacheToken=null,epoch=0;const versions=new Map();
  function reset(){epoch++;blobs.clear();previews.clear();pending.clear();previewPending.clear();versions.clear();cacheToken=app.driveToken;}
  function session(){if(cacheToken!==app.driveToken)reset();return epoch;}
