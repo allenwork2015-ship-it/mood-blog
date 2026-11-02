@@ -4,7 +4,7 @@
  const p=BlogJournalApp.prototype,format=window.JournalBookFormat;
  const root=document.createElement('section');root.id='bookHome';root.hidden=true;
  root.innerHTML='<div id="bookHomeSpread"></div><div class="book-home-nav"><button id="bookHomePrev" type="button">上一頁</button><span id="bookHomePosition" role="status"></span><button id="bookHomeNext" type="button">下一頁</button><label class="book-jump-label">跳至 <input id="bookHomeJump" type="number" min="1" value="1" aria-label="跳至頁碼"> 頁</label><button id="bookHomeJumpGo" type="button">前往</button></div><div class="book-home-quick"><select id="bookHomeJournal" aria-label="跳至日記"></select><button id="bookHomeCleanEmpty" type="button">清除本篇空白頁</button></div>';
- root.insertAdjacentHTML('afterbegin','<p class="book-touch-help">單指左右翻頁；先點照片再拖曳編排。放大後可移動內容。</p>');
+ root.insertAdjacentHTML('afterbegin','<p class="book-touch-help">單指左右翻頁；點文字編輯，先點照片再拖曳編排。</p>');
  root.insertAdjacentHTML('beforeend','<p id="bookHomeEditHint" class="book-window-readonly" hidden>此日記為唯讀，無法清除空白頁。</p>');document.getElementById('postsContainer').before(root);
  const tabs=document.createElement('div');tabs.className='book-home-tabs';tabs.setAttribute('role','group');tabs.setAttribute('aria-label','日記瀏覽模式');tabs.innerHTML='<button id="bookListMode" type="button" aria-pressed="true">列表模式</button><button id="bookReadMode" type="button" aria-pressed="false">日記本模式</button>';root.before(tabs);
  let enabled=false,leaves=[],index=0,signature='',epoch=0,observer=null,timer,workers=0,renderedCount=0;
