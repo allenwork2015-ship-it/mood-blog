@@ -1,0 +1,31 @@
+/* Visible reading photos upgrade automatically; list covers stay lightweight. */
+(()=>{'use strict';
+ const retiredURLs=new Set(),states=new Set(),byImage=new WeakMap(),queue=[],cache=new Map(),pending=new Map();let workers=0,token=null,epoch=0,cleanScheduled=false;
+ const stats=window.ClearPhotoDiagnostics={upgrades:0,cacheHits:0,failures:0,skippedSharp:0,active:0};
+ const scope=()=>{if(token!==app.driveToken){token=app.driveToken;epoch++;cache.clear();pending.clear();}return epoch;};
+ const stamp=(post,path)=>{const m=post.driveImageMeta?.[path];return m?.md5Checksum||m?.modifiedTime||'session';};
+ const alive=s=>s.image.isConnected&&s.valid()&&s.token===app.driveToken&&s.root===app.driveRoot?.id&&s.version===stamp(s.post,s.path);
+ function drop(s){s.dead=true;s.image.removeEventListener('load',s.onLoad);observer?.unobserve(s.image);resize?.unobserve(s.image);s.retry?.remove();if(s.url)retiredURLs.add(s.url);states.delete(s);if(byImage.get(s.image)===s)byImage.delete(s.image);}
+ function cleanup(){cleanScheduled=false;for(const s of states)if(!alive(s))drop(s);const used=new Set([...document.querySelectorAll('img')].filter(img=>img.getClientRects().length).map(img=>img.src));for(const url of retiredURLs)if(!used.has(url)){URL.revokeObjectURL(url);retiredURLs.delete(url);}}
+ function scheduleCleanup(){if(!cleanScheduled){cleanScheduled=true;requestAnimationFrame(cleanup);}}
+ function keep(key,blob){if(blob.size>12*1024*1024)return;cache.set(key,blob);let bytes=[...cache.values()].reduce((n,b)=>n+b.size,0);for(const[k,b]of cache){if(cache.size<=16&&bytes<=12*1024*1024)break;bytes-=b.size;cache.delete(k);}}
+ async function clearBlob(s){const generation=scope(),key=s.root+'|'+s.post.driveImages[s.path]+'|'+s.version;if(cache.has(key)){stats.cacheHits++;return cache.get(key);}if(pending.has(key))return pending.get(key);
+  const job=(async()=>{const blob=await app.driveRequest('files/'+s.post.driveImages[s.path]+'?alt=media&supportsAllDrives=true',{},'blob');if(generation!==epoch||s.token!==app.driveToken)throw Error('連線已變更');
+   const url=URL.createObjectURL(blob),image=new Image();let canvas;try{image.src=url;await image.decode();let result=blob;
+    if(Math.max(image.naturalWidth,image.naturalHeight)>2048&&['image/jpeg','image/png'].includes(blob.type)){canvas=document.createElement('canvas');const scale=2048/Math.max(image.naturalWidth,image.naturalHeight);canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);result=await new Promise(resolve=>canvas.toBlob(resolve,blob.type==='image/png'?'image/png':'image/jpeg',.9))||blob;}
+    if(generation!==epoch||s.token!==app.driveToken)throw Error('連線已變更');keep(key,result);return result;
+   }finally{image.src='';URL.revokeObjectURL(url);if(canvas){canvas.width=0;canvas.height=0;}}
+  })().finally(()=>{if(pending.get(key)===job)pending.delete(key);});pending.set(key,job);return job;
+ }
+ function fail(s){if(!alive(s))return;stats.failures++;s.image.dataset.photoQuality='preview';if(s.retry)return;const b=document.createElement('button');b.type='button';b.textContent='清晰圖片載入失敗，重試';b.className='border rounded-full px-3 py-2 text-xs';b.onclick=event=>{event.stopPropagation();b.remove();s.retry=null;s.failed=false;enqueue(s);};if(s.image.closest('.book-photo,.book-home-placement'))b.style.cssText='position:absolute;left:0;bottom:0;top:auto;right:auto;width:auto;height:auto;display:block;border-radius:8px;font-size:11px;line-height:1.4;background:white;color:#514535;touch-action:manipulation';s.retry=b;s.image.after(b);}
+ function needs(s){const image=s.image;if(!image.complete||!image.naturalWidth)return false;const box=image.getBoundingClientRect(),density=Math.min(3,Math.max(1,devicePixelRatio||1));return image.naturalWidth+2<Math.ceil(box.width*density)||image.naturalHeight+2<Math.ceil(box.height*density);}
+ function enqueue(s){if(s.dead||s.queued||s.running||s.done||s.failed||!s.near||!alive(s))return;if(!needs(s)){stats.skippedSharp++;return;}s.queued=true;queue.push(s);drain();}
+ function drain(){while(workers<2&&queue.length){const s=queue.shift();s.queued=false;if(s.dead||!s.near||!alive(s))continue;workers++;stats.active=workers;s.running=true;
+  (async()=>{let url;try{const blob=await clearBlob(s);if(!alive(s)||!s.near)return;url=URL.createObjectURL(blob);const decoded=new Image();decoded.src=url;await decoded.decode();if(!alive(s)||!s.near){decoded.src='';return;}s.url=url;url=null;s.done=true;s.retry?.remove();s.retry=null;if(s.image.naturalWidth&&s.image.naturalHeight){s.image.style.aspectRatio=s.image.naturalWidth+'/'+s.image.naturalHeight;s.image.style.objectFit='contain';}s.image.dataset.photoQuality='clear';s.image.src=s.url;stats.upgrades++;decoded.src='';}catch{if(alive(s)){s.failed=true;fail(s);}}finally{if(url)URL.revokeObjectURL(url);s.running=false;workers--;stats.active=workers;drain();}})();
+ }}
+ const observer='IntersectionObserver'in window?new IntersectionObserver(entries=>{for(const e of entries){const s=byImage.get(e.target);if(s){s.near=e.isIntersecting;if(s.near)enqueue(s);}}},{rootMargin:'180px'}):null;
+ const resize='ResizeObserver'in window?new ResizeObserver(entries=>{for(const e of entries){const s=byImage.get(e.target);if(s)enqueue(s);}}):null;
+ window.ProgressivePhotos={attach(image,post,path,valid){if(!post?.driveImages?.[path])return;scope();const previous=byImage.get(image);if(previous)drop(previous);const s={image,post,path,valid,token:app.driveToken,root:app.driveRoot?.id,version:stamp(post,path),near:!observer};states.add(s);byImage.set(image,s);image.dataset.photoQuality='preview';s.onLoad=()=>{if(byImage.get(image)===s)enqueue(s);};image.addEventListener('load',s.onLoad);observer?.observe(image);resize?.observe(image);if(image.complete)enqueue(s);},cleanup};
+ new MutationObserver(scheduleCleanup).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']});document.addEventListener('visibilitychange',()=>{if(!document.hidden)for(const s of states)enqueue(s);});
+ Object.defineProperties(stats,{tracked:{enumerable:true,get:()=>states.size},cacheEntries:{enumerable:true,get:()=>cache.size}});
+})();
